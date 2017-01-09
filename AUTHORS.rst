@@ -1,6 +1,5 @@
 .. -*- mode: rst -*-
 
-This is a joint work between Banca IMI and Politecnico di Milano.
 The following people have been core contributors of the project:
 
     * `Leonardo Cella <https://github.com/LeonardoCella/>`_
