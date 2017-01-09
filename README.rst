@@ -6,7 +6,7 @@ Currently a single problem is under investigation:
 
 - Hybrid recommender algorithm
 
-Seethe `AUTHORS.rst <AUTHORS.rst>`_ file for a complete list of contributors.
+See the `AUTHORS.rst <AUTHORS.rst>`_ file for a complete list of contributors.
 
 In the following we provide a brief description of the problem.
 
