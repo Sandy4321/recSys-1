@@ -1,5 +1,3 @@
-.. -*- mode: rst -*-
-
 Machine Learning for Recommender Systems
 ========================================
 
