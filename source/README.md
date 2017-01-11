@@ -8,7 +8,7 @@ This folder contains the library and the entry points of the Recommender Systems
 The code is organized in the following way
 - **examples**: folder containing all the executable scripts that (may) exploit the *library* code
 - **notebooks**: jupyter notebooks for analysis and reporting
-- **datasources**: folder with original and partially processed data
+- **../datasets**: folder with original and partially processed data
 - **library**: folder that collects all the low-level scripts
 
 Datasources:
@@ -23,7 +23,7 @@ How to use:
 Installation
 ============
 
-You can perform a minimal install of ``recSys`` with:
+You can perform a minimal install of ``recSysLib`` with:
 
 .. code:: shell
 

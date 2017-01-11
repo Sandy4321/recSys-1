@@ -1,0 +1,11 @@
+numpy>=1.11
+scipy
+pandas
+lmfit
+seaborn
+scikit-learn>=0.18
+matplotlib
+Sphinx
+numpydoc
+sphinx_rtd_theme
+brewer2mpl
