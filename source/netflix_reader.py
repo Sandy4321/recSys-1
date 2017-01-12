@@ -21,4 +21,4 @@ actor_features_names = ['ActorsLastNameFirstArray', 'ActorsLastNameFirstArray;Di
 actor_features = list()
 for feature_name in actor_features_names:
     actor_features.extend(np.where(icm_stemtypes == feature_name)[0].tolist())
-#you can now obtain the relevant icm with icm_matrix[actor_features]
+#you can now obtain the relevant icm with print(icm_matrix[actor_features]) and obtain the actors featured in a movie with print(icm_matrix[actor_features, movieId])
