@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# @Author: massimo
+# @Author: Massimo Quadrana
 # @Date:   2016-10-24 15:27:46
 # @Last Modified by:   massimo
 # @Last Modified time: 2016-10-24 17:03:51
