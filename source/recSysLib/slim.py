@@ -32,10 +32,9 @@ class Slim(Recommender):
 
     # Fit method, it computes the weight matrix by solving the "optimization problem"
     def fit(self, X):
-        # TODO:Understand what is the type of matrix X
         self.dataset = X
 
-        # Conversion to a csc format
+        # Conversion to a csc format [ csc = sparse matrix factorized by columns]
         X = check_matrix(X, 'csc', dtype=np.float32)
         n_items = X.shape[1] # --> X = URM (n_users x n_items)
 
@@ -46,17 +45,19 @@ class Slim(Recommender):
                                 fit_intercept=False,
                                 copy_X=False)
 
-        # we'll store the W matrix into a sparse csr_matrix
+        # we'll store the W matrix into a sparse csc_matrix, thanks to the independence condition between columns
         # let's initialize the vectors used by the sparse.csc_matrix constructor
         values, rows, cols = [], [], []
 
         # fit each item's factors sequentially (not in parallel)
         for j in range(n_items):
-            # get the target column
+            # get the target column corresponded to the item j
             y = X[:, j].toarray()
+
             # set the j-th column of X to zero
             startptr = X.indptr[j]  # index pointer array of the matrix
             endptr = X.indptr[j + 1]
+            # sparse values written in the column j
             bak = X.data[startptr: endptr].copy()
             X.data[startptr: endptr] = 0.0
             # fit one ElasticNet model per column
