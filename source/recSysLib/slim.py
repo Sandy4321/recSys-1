@@ -75,3 +75,10 @@ class Slim(Recommender):
 
         # generate the sparse weight matrix
         self.W_sparse = sps.csc_matrix((values, (rows, cols)), shape=(n_items, n_items), dtype=np.float32)
+
+    def get_weight_matrix(self):
+        """
+        Simple getter
+        :return: get the weight matrix as a compressed sparse column matrix
+        """
+        return self.W_sparse
