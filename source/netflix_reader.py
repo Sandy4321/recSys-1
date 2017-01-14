@@ -133,7 +133,8 @@ class NetflixReader:
         title_2 = self.titles[movieId2]
         return SequenceMatcher(lambda x: x in " \t", title_1.lower(), title_2.lower()).ratio() #skip the blanks
     
-        
+    
+    #return all the "feature products" between two items
     def similarity(self, movieId1, movieId2):
         return (self._similarity_actors(movieId1, movieId2),
                 self._similarity_cast_dimension(movieId1, movieId2),
@@ -144,6 +145,13 @@ class NetflixReader:
                 self._similarity_miniseries(movieId1, movieId2),
                 self._similarity_years(movieId1, movieId2),
                 self._similarity_titles(movieId1, movieId2))
+    
+    
+    #return the rating of an user for a movie
+    #WARNING: 0 means the rating is missing
+    def get_rating(self, userId, movieId):
+        return self.urm[userId, movieId]
+        
     
     
 if __name__ == '__main__':
