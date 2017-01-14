@@ -65,7 +65,10 @@ class Slim(Recommender):
 
             # self.model.coef_ contains the coefficient of the ElasticNet model
             # let's keep only the non-zero values
-            nnz_idx = self.model.coef_ > 0.0
+            # Massimo version
+            # nnz_idx = self.model.coef_ > 0.0  # TODO: check if it is correct
+
+            nnz_idx = self.model.coef_[self.model.coef_ > 0.0]  # TODO: check if it is correct
             values.extend(self.model.coef_[nnz_idx])
             rows.extend(np.arange(n_items)[nnz_idx])
             cols.extend(np.ones(nnz_idx.sum()) * j)
