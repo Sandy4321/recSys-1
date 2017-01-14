@@ -1,5 +1,6 @@
 name: recsys
 dependencies:
+- joblib=0.9.4=py36_0
 - libgfortran=3.0.0=1
 - mkl=2017.0.1=0
 - numpy=1.11.3=py36_0
