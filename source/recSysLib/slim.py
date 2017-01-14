@@ -31,12 +31,16 @@ class Slim(Recommender):
         )
 
     # Fit method, it computes the weight matrix by solving the "optimization problem"
-    def fit(self, X):
+    def fit(self, X, verbose = 0):
         self.dataset = X
 
         # Conversion to a csc format [ csc = sparse matrix factorized by columns]
         X = check_matrix(X, 'csc', dtype=np.float32)
         n_items = X.shape[1] # --> X = URM (n_users x n_items)
+
+        if verbose > 0:
+            print("matrix shape {}".format(X.shape))
+            print("Definition of ElasticNet")
 
         # initialize the ElasticNet model to solve the optimization problem
         self.model = ElasticNet(alpha=1.0,
@@ -51,6 +55,9 @@ class Slim(Recommender):
 
         # fit each item's factors sequentially (not in parallel)
         for j in range(n_items):
+            if verbose > 0:
+                print("Iteration {} over {}".format(j,n_items))
+
             # get the target column corresponded to the item j
             y = X[:, j].toarray()
 
@@ -66,9 +73,9 @@ class Slim(Recommender):
             # self.model.coef_ contains the coefficient of the ElasticNet model
             # let's keep only the non-zero values
             # Massimo version
-            # nnz_idx = self.model.coef_ > 0.0  # TODO: check if it is correct
 
-            nnz_idx = self.model.coef_[self.model.coef_ > 0.0]  # TODO: check if it is correct
+            nnz_idx = self.model.coef_ > 0.0
+
             values.extend(self.model.coef_[nnz_idx])
             rows.extend(np.arange(n_items)[nnz_idx])
             cols.extend(np.ones(nnz_idx.sum()) * j)
