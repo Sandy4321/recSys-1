@@ -93,6 +93,16 @@ class Slim(Recommender):
         """
         return self.W_sparse
 
+    def recommend(self, user_id, n=None, exclude_seen=True):
+        # compute the scores using the dot product
+        user_profile = self._get_user_ratings(user_id)
+        scores = user_profile.dot(self.W_sparse).toarray().ravel()
+        ranking = scores.argsort()[::-1]
+        # rank items
+        if exclude_seen:
+            ranking = self._filter_seen(user_id, ranking)
+        return ranking[:n]
+
 from multiprocessing import Pool
 from functools import partial
 
