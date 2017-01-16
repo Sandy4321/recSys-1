@@ -38,7 +38,7 @@ if TO_COMPUTE_SLIM:
             weight_matrix = model.get_weight_matrix()
             if weight_matrix.getnnz() > max_nnz:
                 max_nnz = weight_matrix.getnnz()
-                save_sparse('../datasources/slim_W01.npz',weight_matrix.toarray())
+                #save_sparse('../datasources/slim_W01.npz',weight_matrix.toarray())
                 print("l1: {} , l2: {} , len: {}".format(l1,l2,weight_matrix.getnnz()))
 else:
     weight_matrix = load_sparse('../datasources/slim_W01.npz','csc')
