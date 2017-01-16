@@ -2,7 +2,7 @@ import scipy.io as sio
 import numpy as np
 from difflib import SequenceMatcher
 
-BASEFILE = "../datasets/Enriched_Netflix_Dataset/"
+BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 
 class NetflixReader:
     def __init__(self):
