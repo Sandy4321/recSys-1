@@ -1,5 +1,5 @@
 from recSysLib.dataset_partition import DataPartition
-from netflix_reader import NetflixReader
+from recSysLib.netflix_reader import NetflixReader
 
 percentage_train_row = 0.9
 percentage_train_col = 0.9

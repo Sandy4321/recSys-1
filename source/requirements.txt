@@ -10,3 +10,5 @@ numpydoc
 sphinx_rtd_theme
 brewer2mpl
 joblib
+theano
+lasagne

@@ -1,5 +1,5 @@
 from recSysLib.data_utils import load_sparse,save_sparse
-from netflix_reader import NetflixReader
+from recSysLib.netflix_reader import NetflixReader
 from recSysLib import slim
 import numpy as np
 import joblib
@@ -33,6 +33,7 @@ if TO_COMPUTE_SLIM:
     # gridSearch on l1_penalty, l2_penalty of Slim... qua ci sarebbe da ragionarci un po'.... TODO
     for l1 in [0.001 , 0.01 , 0.05 , 0.1 , 0.5]:
         for l2 in [0.001 , 0.01 , 0.05 , 0.1 , 0.5]:
+            
             model = slim.MultiThreadSLIM(l1_penalty=l1,l2_penalty=l2)
             model.fit(netflix_urm)
             weight_matrix = model.get_weight_matrix()
