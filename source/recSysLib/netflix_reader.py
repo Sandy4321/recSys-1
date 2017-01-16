@@ -1,3 +1,4 @@
+#Author: Stefano Cereda
 import scipy.io as sio
 import numpy as np
 from difflib import SequenceMatcher
@@ -52,8 +53,8 @@ class NetflixReader:
         actors_1 = self.icm_matrix[self.actor_features, movieId1].astype(bool)
         actors_2 = self.icm_matrix[self.actor_features, movieId2].astype(bool)
 
-        num_act = np.sum(actors_1) + np.sum(actors_2)
-        num_commons = np.sum(actors_1.multiply(actors_2))
+        num_act = actors_1.sum() + actors_2.sum()
+        num_commons = (actors_1.multiply(actors_2)).sum()
         return 2*num_commons/num_act
         
         
@@ -62,8 +63,8 @@ class NetflixReader:
         actors_1 = self.icm_matrix[self.actor_features, movieId1].astype(bool)
         actors_2 = self.icm_matrix[self.actor_features, movieId2].astype(bool)
 
-        num_act_1 = np.sum(actors_1)
-        num_act_2 = np.sum(actors_2)
+        num_act_1 = actors_1.sum()
+        num_act_2 = actors_2.sum()
         
         return 1/(1+abs(num_act_1 - num_act_2))
 
@@ -73,15 +74,21 @@ class NetflixReader:
         country_1 = self.icm_matrix[self.country_features, movieId1].astype(bool)
         country_2 = self.icm_matrix[self.country_features, movieId2].astype(bool)
 
-        return np.sum(country_1.multiply(country_2))
+        return (country_1.multiply(country_2)).sum()
 
 
     #check if the director is the same
     def _similarity_directors(self, movieId1, movieId2):
         dir_1 = self.icm_matrix[self.director_features, movieId1].astype(bool)
         dir_2 = self.icm_matrix[self.director_features, movieId2].astype(bool)
-
-        return np.sum(dir_1.multiply(dir_2))
+    
+        num_directors = dir_1.sum() + dir_2.sum()
+        num_commons = (dir_1.multiply(dir_2)).sum()
+        
+        if num_directors == 0:
+            return 0.1
+        
+        return 2* num_commons / num_directors
 
 
     #The similarity between genres is given by the number of common genres
@@ -90,10 +97,10 @@ class NetflixReader:
         genres_1 = self.icm_matrix[self.genres_features, movieId1].astype(bool)
         genres_2 = self.icm_matrix[self.genres_features, movieId2].astype(bool)
 
-        #num_genres = np.sum(genres_1) + np.sum(genres_2)
-        num_commons = np.sum(genres_1.multiply(genres_2))
+        num_genres = genres_1.sum() + genres_2.sum()
+        num_commons = (genres_1.multiply(genres_2)).sum()
         
-        return num_commons
+        return 2* num_commons / num_genres
         
         
     #As for the actors, we can use the "complexity" of the genres
@@ -101,8 +108,8 @@ class NetflixReader:
         genres_1 = self.icm_matrix[self.genres_features, movieId1].astype(bool)
         genres_2 = self.icm_matrix[self.genres_features, movieId2].astype(bool)
 
-        num_genres_1 = np.sum(genres_1)
-        num_genres_2 = np.sum(genres_2)
+        num_genres_1 = genres_1.sum()
+        num_genres_2 = genres_2.sum()
         
         return 1/(1+abs(num_genres_1-num_genres_2))
         
@@ -112,7 +119,7 @@ class NetflixReader:
         type_1 = self.icm_matrix[self.miniseries_features, movieId1].astype(bool).toarray()[0][0]
         type_2 = self.icm_matrix[self.miniseries_features, movieId2].astype(bool).toarray()[0][0]
 
-        return np.sum(type_1 == type_2)
+        return (type_1 == type_2).sum()
 
 
     #The similarity of two years is the inverse of their difference
@@ -147,6 +154,9 @@ class NetflixReader:
                 self._similarity_titles(movieId1, movieId2))
     
     
+    def similarity_tuple(self, ij):
+        return self.similarity(ij[0], ij[1])
+    
     #return the rating of an user for a movie
     #WARNING: 0 means the rating is missing
     def get_rating(self, userId, movieId):
@@ -157,6 +167,9 @@ class NetflixReader:
 if __name__ == '__main__':
     a = NetflixReader()
     print("loaded")
+    
+    for i in range(10):
+        print(a.similarity(i,i))
     
     def _compute(ij):
         i = ij[0]

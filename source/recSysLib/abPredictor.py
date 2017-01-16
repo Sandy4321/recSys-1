@@ -19,7 +19,7 @@ NUM_EPOCHS = 1000
 
 VAL_PERCENTAGE = 0.1
 
-BASE_FILE = "../../datasources/ab/"
+BASE_FILE = "../datasources/ab/"
 AB_FILE_X_TRAIN = BASE_FILE + "X_train.npy"
 AB_FILE_X_VAL = BASE_FILE + "X_val.npy"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
@@ -181,7 +181,7 @@ class abPredictor:
     #TODO: REFACTOR
     def _create_dataset(self):
         #load the slim matrix and the netflix dataset
-        weight_matrix = np.load('../a.npy')
+        weight_matrix = np.load('../../datasources/slim_W01.npz')
         from netflix_reader import  NetflixReader
         rdr = NetflixReader()
         from sklearn.cross_validation import train_test_split
