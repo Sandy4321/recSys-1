@@ -92,3 +92,64 @@ class Slim(Recommender):
         :return: get the weight matrix as a compressed sparse column matrix
         """
         return self.W_sparse
+
+from multiprocessing import Pool
+from functools import partial
+
+class MultiThreadSLIM(Slim):
+        def __init__(self,
+                     l1_penalty=0.1,
+                     l2_penalty=0.1,
+                     positive_only=True,
+                     workers=4):
+            super(MultiThreadSLIM, self).__init__(l1_penalty=l1_penalty,
+                                                  l2_penalty=l2_penalty,
+                                                  positive_only=positive_only)
+            self.workers = workers
+
+        def __str__(self):
+            return "SLIM_mt (l1_penalty={},l2_penalty={},positive_only={},workers={})".format(
+                self.l1_penalty, self.l2_penalty, self.positive_only, self.workers
+            )
+
+        def _partial_fit(self, j, X):
+            model = ElasticNet(alpha=1.0,
+                               l1_ratio=self.l1_ratio,
+                               positive=self.positive_only,
+                               fit_intercept=False,
+                               copy_X=False)
+            # WARNING: make a copy of X to avoid race conditions on column j
+            # TODO: We can probably come up with something better here.
+            X_j = X.copy()
+            # get the target column
+            y = X_j[:, j].toarray()
+            # set the j-th column of X to zero
+            X_j.data[X_j.indptr[j]:X_j.indptr[j + 1]] = 0.0
+            # fit one ElasticNet model per column
+            model.fit(X_j, y)
+            # self.model.coef_ contains the coefficient of the ElasticNet model
+            # let's keep only the non-zero values
+            nnz_idx = model.coef_ > 0.0
+            values = model.coef_[nnz_idx]
+            rows = np.arange(X.shape[1])[nnz_idx]
+            cols = np.ones(nnz_idx.sum()) * j
+            return values, rows, cols
+
+        def fit(self, X):
+            self.dataset = X
+            X = check_matrix(X, 'csc', dtype=np.float32)
+            n_items = X.shape[1]
+            # fit item's factors in parallel
+            _pfit = partial(self._partial_fit, X=X)
+            pool = Pool(processes=self.workers)
+            res = pool.map(_pfit, np.arange(n_items))
+
+            # res contains a vector of (values, rows, cols) tuples
+            values, rows, cols = [], [], []
+            for values_, rows_, cols_ in res:
+                values.extend(values_)
+                rows.extend(rows_)
+                cols.extend(cols_)
+                # generate the sparse weight matrix
+
+            self.W_sparse = sps.csc_matrix((values, (rows, cols)), shape=(n_items, n_items), dtype=np.float32)

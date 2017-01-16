@@ -4,7 +4,7 @@ from recSysLib import slim
 import numpy as np
 import joblib
 
-TO_COMPUTE_SLIM = False
+TO_COMPUTE_SLIM = True
 
 # Get the URM
 
@@ -31,14 +31,15 @@ print("Non zero elements all cols avg: {}".format(np.sum(netflix_urm.getnnz(axis
 max_nnz = 0
 if TO_COMPUTE_SLIM:
     # gridSearch on l1_penalty, l2_penalty of Slim... qua ci sarebbe da ragionarci un po'.... TODO
-    for l1 in [0.01 , 0.05 , 0.1 , 0.5]:
-        for l2 in [0.01 , 0.05 , 0.1 , 0.5]:
-            model = slim.Slim(l1_penalty=l1,l2_penalty=l2)
-            model.fit(netflix_urm,verbose=0)
+    for l1 in [0.001 , 0.01 , 0.05 , 0.1 , 0.5]:
+        for l2 in [0.001 , 0.01 , 0.05 , 0.1 , 0.5]:
+            model = slim.MultiThreadSLIM(l1_penalty=l1,l2_penalty=l2)
+            model.fit(netflix_urm)
             weight_matrix = model.get_weight_matrix()
             if weight_matrix.getnnz() > max_nnz:
                 max_nnz = weight_matrix.getnnz()
                 save_sparse('../datasources/slim_W01.npz',weight_matrix.toarray())
+                print("l1: {} , l2: {} , len: {}".format(l1,l2,weight_matrix.getnnz()))
 else:
     weight_matrix = load_sparse('../datasources/slim_W01.npz','csc')
 
