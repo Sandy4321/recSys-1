@@ -28,13 +28,17 @@ print("Non zero elements all cols len: {}".format(len(netflix_urm.getnnz(axis=0)
 print("Non zero elements all cols sum: {}".format(np.sum(netflix_urm.getnnz(axis=0))))
 print("Non zero elements all cols avg: {}".format(np.sum(netflix_urm.getnnz(axis=0))/len(netflix_urm.getnnz(axis=0))))
 
-
+max_nnz = 0
 if TO_COMPUTE_SLIM:
     # gridSearch on l1_penalty, l2_penalty of Slim... qua ci sarebbe da ragionarci un po'.... TODO
-    model = slim.Slim()
-    model.fit(netflix_urm,verbose=0)
-    weight_matrix = model.get_weight_matrix()
-    save_sparse('../datasources/slim_W01.npz',weight_matrix.toarray())
+    for l1 in [0.01 , 0.05 , 0.1 , 0.5]:
+        for l2 in [0.01 , 0.05 , 0.1 , 0.5]:
+            model = slim.Slim(l1_penalty=l1,l2_penalty=l2)
+            model.fit(netflix_urm,verbose=0)
+            weight_matrix = model.get_weight_matrix()
+            if weight_matrix.getnnz() > max_nnz:
+                max_nnz = weight_matrix.getnnz()
+                save_sparse('../datasources/slim_W01.npz',weight_matrix.toarray())
 else:
     weight_matrix = load_sparse('../datasources/slim_W01.npz','csc')
 
