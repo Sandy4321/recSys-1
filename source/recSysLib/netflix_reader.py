@@ -13,8 +13,8 @@ class NetflixReader:
         
         #try to load the dictionary
         try:
-            with open(DICTIONARY_FILE, 'wb') as f:
-                self._dict = pickle.load(DICTIONARY_FILE)
+            with open(DICTIONARY_FILE, 'rb') as f:
+                self._dict = pickle.load(f)
         except:
             print("Building dictionary")
         
