@@ -1,9 +1,14 @@
+#Author: Stefano Cereda
 import theano.tensor as T
 import theano
 import numpy as np
 from lasagne.layers import InputLayer, GaussianNoiseLayer, DenseLayer
 from lasagne.regularization import l2, regularize_network_params
 import lasagne
+import scipy
+from netflix_reader import  NetflixReader
+import multiprocessing
+
 
 NUM_FEATURES = 9
 GAUSSIAN_NOISE_SIGMA = 0.
@@ -43,7 +48,7 @@ class abPredictor:
         self._lr = theano.shared(np.float32(LEARNING_RATE))
         self._l2 = theano.shared(np.float32(L2_LAMBDA))
         print("Creating functions")
-        (self._train_fn, self._val_fn) = self._create_learning_functions(self._net, self._input_var,
+        (self._train_fn, self._val_fn, self._predict_fn) = self._create_learning_functions(self._net, self._input_var,
                                                                          self._target_var, self._lr, self._l2)
         
         #load the dataset
@@ -92,8 +97,9 @@ class abPredictor:
         
         train_fn = theano.function([input_var, target_var], [loss, l2_loss], updates=updates)
         val_fn = theano.function([input_var, target_var], [test_loss, l2_loss])
+        predict_fn = theano.function([input_var], [test_out])
         
-        return (train_fn, val_fn)
+        return (train_fn, val_fn, predict_fn)
             
             
     ###TRAIN THE NETWORK###
@@ -175,8 +181,7 @@ class abPredictor:
     #TODO: REFACTOR
     def _create_dataset(self):
         #load the slim matrix and the netflix dataset
-        from data_utils import load_sparse
-        weight_matrix = load_sparse('../../datasources/slim_W01.npz','csc')
+        weight_matrix = np.load('../a.npy')
         from netflix_reader import  NetflixReader
         rdr = NetflixReader()
         from sklearn.cross_validation import train_test_split
@@ -203,12 +208,23 @@ class abPredictor:
         np.save(AB_FILE_Y_TRAIN, np.array(y_train, dtype=np.float32))
         np.save(AB_FILE_Y_VAL, np.array(y_val, dtype=np.float32))
         
+        
+        
+    ###COMPUTE THE SIMILARITY MATRIX USING THE NETWORK###
+    def _compute_sim_matrix(self):
+        rdr = NetflixReader()
+        matrix = scipy.sparse.csc_matrix((6489,6489), dtype=np.float32)
+        
+        #our similarity measure is symmetric
+        pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
+        
+        print("Computing products")
+        features_products=pool.map(rdr.similarity_tuple, ((i,j) for i in range(1,50) for j in range(i+1,50)))
+        print("Computing similarities")
+        similarities = self._predict_fn(np.array(features_products, dtype = np.float32))
+        print(similarities.shape)
+        
     
 if __name__ == '__main__':
     a = abPredictor()
-    print(a._X_train.shape)
-    print(a._y_train.shape)
-    
-    print(a._X_train)
-    print(a._y_train)   
-    a.fit_network()
+    a._compute_sim_matrix()
