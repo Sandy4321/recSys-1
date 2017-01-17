@@ -1,14 +1,9 @@
 from recSysLib import slim
-from recSysLib.netflix_reader import NetflixReader
-from recSysLib.data_utils import store_sparse_mat, load_sparse_mat
-from scipy import io as sio
-import numpy as np
+from recSysLib.data_utils import store_sparse_mat, load_sparse_mat, get_urm
 
 folder_path = '../../datasources/'
-BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 
-_urm = sio.loadmat(BASEFILE + "./urm.mat")['urm']
-netflix_urm = _urm
+netflix_urm = get_urm()
 
 # Compute Weight Matrix
 l1, l2 = 0.01, 0.01

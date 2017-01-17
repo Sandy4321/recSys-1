@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import sparse
+from scipy import io as sio
 import joblib as jbl
 
 def df_to_csr(df, nrows, ncols, is_implicit=False, user_key='user_idx', item_key='item_idx', rating_key='rating'):
@@ -21,3 +22,8 @@ def store_sparse_mat(m, name):
 def load_sparse_mat(name):
     m = jbl.load(name)
     return m
+
+def get_urm():
+    BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
+    _urm = sio.loadmat(BASEFILE + "./urm.mat")['urm']
+    return _urm
