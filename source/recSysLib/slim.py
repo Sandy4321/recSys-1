@@ -103,6 +103,11 @@ class Slim(Recommender):
             ranking = self._filter_seen(user_id, ranking)
         return ranking[:n]
 
+    def predict_rates(self, user_id, exclude_seen=True):
+        user_profile = self._get_user_ratings(user_id)
+        scores = user_profile.dot(self.W_sparse).toarray().ravel()
+        print(scores)
+
 from multiprocessing import Pool
 from functools import partial
 
