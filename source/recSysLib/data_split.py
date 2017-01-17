@@ -1,23 +1,14 @@
 import numpy as np
+from sklearn.model_selection import train_test_split
 
-def holdout(data, user_key='user_id', item_key='item_id', perc=0.8, seed=1234, clean_test=True):
-    # set the random seed
-    rng = np.random.RandomState(seed)
-    #  shuffle data
-    nratings = data.shape[0]
-    shuffle_idx = rng.permutation(nratings)
-    train_size = int(nratings * perc)
-    # split data according to the shuffled index and the holdout size
-    train_split = data[shuffle_idx[:train_size]]
-    test_split = data[shuffle_idx[train_size:]]
+def holdout(data, perc=0.99, seed=1234, clean_test=True):
 
-    print("TRAIN SPLIT len {}\n {}",len(train_split),train_split)
-    print("\nTEST SPLIT len {}:\n",len(test_split),test_split)
+    data_train, data_validation = train_test_split(data, test_size=1-perc, random_state=seed)
 
-    # remove new user and items from the test split
-    if clean_test:
-        train_users = train_split[user_key].unique()
-        train_items = train_split[item_key].unique()
-        test_split = test_split[(test_split[user_key].isin(train_users)) & (test_split[item_key].isin(train_items))]
+    print("DATA TRAIN: {}".format(type(data_train)))
+    print(data_train)
 
-    return train_split, test_split
+    print("DATA VALID: {}".format(type(data_validation)))
+    print(data_validation)
+
+    return data_train,data_validation
