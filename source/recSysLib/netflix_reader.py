@@ -5,21 +5,21 @@ from difflib import SequenceMatcher
 import pickle
 
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
-DICTIONARY_FILE = "../../datasources/netflix/dict.pkl"
+ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
+PRODUCTS_DICTIONARY_FILE = "../../datasources/netflix/f_prod_dict.pkl"
+
 
 class NetflixReader:
     def __init__(self):
         self._urm = sio.loadmat(BASEFILE + "./urm.mat")['urm']
-        
-        #try to load the dictionary
+        self.numItems = self._urm.shape[1]
+        #try to load the icm dictionary
         try:
-            with open(DICTIONARY_FILE, 'rb') as f:
-                self._dict = pickle.load(f)
+            with open(ICM_DICTIONARY_FILE, 'rb') as f:
+                self._icm_dict = pickle.load(f)
         except:
-            print("Building dictionary")
+            print("Building icm dictionary")
         
-            self._icm = sio.loadmat(BASEFILE + "./icm.mat")
-            self._icm_matrix = self._icm['icm']
             self._icm_dictionary = self._icm['dictionary']
             self._icm_stems = self._icm_dictionary['stems'][0][0]
             self._icm_stemtypes = self._icm_dictionary['stemTypes'][0][0]
@@ -56,32 +56,51 @@ class NetflixReader:
             self._years_features = np.where(self._icm_stemtypes == 'Year')[0].tolist()
             
             self._build_feature_dictionary()
-            with open(DICTIONARY_FILE, 'wb') as f:
-                pickle.dump(self._dict, f, pickle.HIGHEST_PROTOCOL)
-    
+            with open(ICM_DICTIONARY_FILE, 'wb') as f:
+                pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
+        
+        
+        #try to load the dictionary of products
+        try:
+            with open(PRODUCTS_DICTIONARY_FILE, 'rb') as f:
+                self._prod_dict = pickle.load(f)
+        except:
+            print("Building features products dictionary")
+            self._build_products_dictionary()
+            with open(PRODUCTS_DICTIONARY_FILE, 'wb') as f:
+                    pickle.dump(self._prod_dict, f, pickle.HIGHEST_PROTOCOL)
     
     
     ###CONVERT THE MATRIX TO A DICTIONARY###
     def _build_feature_dictionary(self):
-        self._dict = {}
+        self._icm_dict = {}
         for itemId in range(0, self._icm_matrix.shape[1]):
-            self._dict[itemId] = list()
-            self._dict[itemId].append(self._icm_matrix[self._actor_features, itemId].astype(bool))
-            self._dict[itemId].append(self._icm_matrix[self._country_features, itemId].astype(bool))
-            self._dict[itemId].append(self._icm_matrix[self._director_features, itemId].astype(bool))
-            self._dict[itemId].append(self._icm_matrix[self._genres_features, itemId].astype(bool))
-            self._dict[itemId].append(self._icm_matrix[self._miniseries_features, itemId].astype(bool).toarray()[0][0])
+            self._icm_dict[itemId] = list()
+            self._icm_dict[itemId].append(self._icm_matrix[self._actor_features, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._country_features, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._director_features, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._genres_features, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._miniseries_features, itemId].astype(bool).toarray()[0][0])
             year_feat = self._icm_matrix[self._years_features, itemId].astype(bool).indices[0]
-            self._dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
-            self._dict[itemId].append(self._titles[itemId])
+            self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
+            self._icm_dict[itemId].append(self._titles[itemId])
             
             
+    ###COMPUTE A DICTIONARY OF FEATURES PRODUCTS###
+    def _build_products_dictionary(self):          
+        self._prod_dict = {}
+        for movieId1 in range(0, self.numItems):
+            self._prod_dict[movieId1] = {}
+            for movieId2 in range(movieId1+1, self.numItems):
+                self._prod_dict[movieId1][movieId2] = self._similarity(movieId1, movieId2)
+    
+    
     
     #compute f_{i;actors} * f_{j;actors} by counting the number of common actors
     #TODO: is better to use the number of common actors or normalize it against the number of featured actors?
     def _similarity_actors(self, movieId1, movieId2):
-        actors_1 = self._dict[movieId1][0]
-        actors_2 = self._dict[movieId2][0]
+        actors_1 = self._icm_dict[movieId1][0]
+        actors_2 = self._icm_dict[movieId2][0]
 
         num_act = actors_1.sum() + actors_2.sum()
         num_commons = (actors_1.multiply(actors_2)).sum()
@@ -90,8 +109,8 @@ class NetflixReader:
         
     #we can also use the number of actors to compute teh similarity between the cast dimension
     def _similarity_cast_dimension(self, movieId1, movieId2):
-        actors_1 = self._dict[movieId1][0]
-        actors_2 = self._dict[movieId2][0]
+        actors_1 = self._icm_dict[movieId1][0]
+        actors_2 = self._icm_dict[movieId2][0]
 
         num_act_1 = actors_1.sum()
         num_act_2 = actors_2.sum()
@@ -101,16 +120,16 @@ class NetflixReader:
 
     #compute the similarity of the origin country by checking if they are the same
     def _similarity_countries(self, movieId1, movieId2):
-        country_1 = self._dict[movieId1][1]
-        country_2 = self._dict[movieId2][1]
+        country_1 = self._icm_dict[movieId1][1]
+        country_2 = self._icm_dict[movieId2][1]
 
         return (country_1.multiply(country_2)).sum()
 
 
     #check if the director is the same
     def _similarity_directors(self, movieId1, movieId2):
-        dir_1 = self._dict[movieId1][2]
-        dir_2 = self._dict[movieId2][2]
+        dir_1 = self._icm_dict[movieId1][2]
+        dir_2 = self._icm_dict[movieId2][2]
     
         num_directors = dir_1.sum() + dir_2.sum()
         num_commons = (dir_1.multiply(dir_2)).sum()
@@ -124,8 +143,8 @@ class NetflixReader:
     #The similarity between genres is given by the number of common genres
     #TODO: like for the actors, would a percentage be better?
     def _similarity_genres(self, movieId1, movieId2):
-        genres_1 = self._dict[movieId1][3]
-        genres_2 = self._dict[movieId2][3]
+        genres_1 = self._icm_dict[movieId1][3]
+        genres_2 = self._icm_dict[movieId2][3]
 
         num_genres = genres_1.sum() + genres_2.sum()
         num_commons = (genres_1.multiply(genres_2)).sum()
@@ -135,8 +154,8 @@ class NetflixReader:
         
     #As for the actors, we can use the "complexity" of the genres
     def _similarity_num_genres(self, movieId1, movieId2):
-        genres_1 = self._dict[movieId1][3]
-        genres_2 = self._dict[movieId2][3]
+        genres_1 = self._icm_dict[movieId1][3]
+        genres_2 = self._icm_dict[movieId2][3]
 
         num_genres_1 = genres_1.sum()
         num_genres_2 = genres_2.sum()
@@ -146,8 +165,8 @@ class NetflixReader:
         
     #check if the two items are both miniseries OR if they are both NOT miniseries
     def _similarity_miniseries(self, movieId1, movieId2):
-        type_1 = self._dict[movieId1][4]
-        type_2 = self._dict[movieId2][4]
+        type_1 = self._icm_dict[movieId1][4]
+        type_2 = self._icm_dict[movieId2][4]
 
         return (type_1 == type_2).sum()
 
@@ -155,21 +174,21 @@ class NetflixReader:
     #The similarity of two years is the inverse of their difference
     #TODO: maybe try a more refined approach
     def _similarity_years(self, movieId1, movieId2):
-        year_1 = self._dict[movieId1][5]
-        year_2 = self._dict[movieId2][5]
+        year_1 = self._icm_dict[movieId1][5]
+        year_2 = self._icm_dict[movieId2][5]
         
         return 1/(1+abs(year_1-year_2))
         
 
     #The similarity of two titles is the number of common words
     def _similarity_titles(self, movieId1, movieId2):
-        title_1 = self._dict[movieId1][6]
-        title_2 = self._dict[movieId1][6]
+        title_1 = self._icm_dict[movieId1][6]
+        title_2 = self._icm_dict[movieId1][6]
         return SequenceMatcher(lambda x: x in " \t", title_1.lower(), title_2.lower()).ratio() #skip the blanks
     
     
     #return all the "feature products" between two items
-    def similarity(self, movieId1, movieId2):
+    def _similarity(self, movieId1, movieId2):
         return (self._similarity_actors(movieId1, movieId2),
                 self._similarity_cast_dimension(movieId1, movieId2),
                 self._similarity_countries(movieId1, movieId2),
@@ -179,44 +198,37 @@ class NetflixReader:
                 self._similarity_miniseries(movieId1, movieId2),
                 self._similarity_years(movieId1, movieId2),
                 self._similarity_titles(movieId1, movieId2))
-    
-    
-    def similarity_tuple(self, ij):
-        return self.similarity(ij[0], ij[1])
-    
-    
-
-
-    
-    #return the rating of an user for a movie
-    #WARNING: 0 means the rating is missing
-    def get_rating(self, userId, movieId):
-        return self.urm[userId, movieId]
         
     
+    ###PUBLIC METHOD TO BE CALLED TO OBTAIN THE FEATURES PRODUCTS BETWEEN TWO ITEMS###
+    def get_similarity(i, j):
+        if i == j:
+            raise ValueError('Asking similarity of an item with itself')
+        if i < j:
+            return self._prod_dict[i][j]
+        return self._prod_dict[j][i]
+    
+    def get_similarity(ij):
+        return get_similarity(ij[0], ij[1])
+            
     
 if __name__ == '__main__':
     a = NetflixReader()
     print("loaded")
-    
-    def _compute(ij):
-        i = ij[0]
-        j = ij[1]
-        return (i,j,a.similarity(i,j))
     
     import time
     import multiprocessing
 
     tic = time.time()
     pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
-    res=pool.map(_compute, ((i,j) for i in range(1,100) for j in range(i+1,100)))
+    res=pool.map(a.get_similarity, ((i,j) for i in range(1,100) for j in range(i+1,100)))
     toc = time.time()
     print("The parallel version took %f seconds" %(toc-tic))
     
     tic = time.time()
     for i in range(1,100):
         for j in range(i+1,100):
-            _compute((i,j))
+            a.get_similarity(i,j)
     toc = time.time()
     print("The serial version took %f seconds" %(toc-tic))
 
