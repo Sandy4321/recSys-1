@@ -1,6 +1,5 @@
 from recSysLib.dataset_partition import DataPartition
 from recSysLib.data_utils import get_urm
-
 percentage_train_row = 0.9
 percentage_train_col = 0.9
 
