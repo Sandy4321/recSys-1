@@ -12,4 +12,3 @@ brewer2mpl
 joblib
 theano
 lasagne
-tables
