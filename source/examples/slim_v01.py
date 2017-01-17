@@ -1,5 +1,5 @@
-from recSysLib.netflix_reader import NetflixReader
 from recSysLib.data_split import holdout
+from recSysLib.data_utils import get_urm
 from recSysLib.metrics import precision, recall
 from recSysLib import slim
 
@@ -8,9 +8,7 @@ import numpy as np
 TO_COMPUTE_SLIM = True
 
 # Get the URM
-
-netflixReader = NetflixReader()
-netflix_urm = netflixReader.urm
+netflix_urm = get_urm()
 
 if TO_COMPUTE_SLIM:
 

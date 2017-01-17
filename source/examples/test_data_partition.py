@@ -1,12 +1,10 @@
 from recSysLib.dataset_partition import DataPartition
-from recSysLib.netflix_reader import NetflixReader
+from recSysLib.data_utils import get_urm
 
 percentage_train_row = 0.9
 percentage_train_col = 0.9
 
-
-urm_reader = NetflixReader()
-urm = urm_reader.urm
+urm = get_urm()
 
 urm_partition = DataPartition(urm)
 urm_partition.split_train_test(train_perc_col=percentage_train_col, train_perc_row=percentage_train_row,verbose=1)
