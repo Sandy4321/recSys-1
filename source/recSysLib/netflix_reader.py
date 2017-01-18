@@ -9,7 +9,7 @@ import math
 
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
-PRODUCTS_MATRIX_FILE = "../../datasources/netflix/f_prod_mat.pkl"
+PRODUCTS_MATRIX_FILE = "../../datasources/netflix/f_prod_mat"
 
 
 class NetflixReader:
@@ -65,13 +65,11 @@ class NetflixReader:
         
         #try to load the matrix of products
         try:
-            with open(PRODUCTS_MATRIX_FILE, 'rb') as f:
-                self._prod_dict = pickle.load(f)
+            self._prod_mat = np.load(PRODUCTS_MATRIX_FILE)
         except:
             print("Building features products matrix")
             self._build_products_matrix()
-            with open(PRODUCTS_MATRIX_FILE, 'wb') as f:
-                    pickle.dump(self._prod_mat, f, pickle.HIGHEST_PROTOCOL)
+            np.save(PRODUCTS_MATRIX_FILE, self._prod_mat)
     
     
     ###CONVERT THE MATRIX TO A DICTIONARY###
