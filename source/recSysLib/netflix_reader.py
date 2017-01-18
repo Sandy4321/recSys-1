@@ -112,7 +112,7 @@ class NetflixReader:
 
         num_act = actors_1.sum() + actors_2.sum()
         num_commons = (actors_1.multiply(actors_2)).sum()
-        return 2*num_commons/np.max(1,num_act)
+        return 2*num_commons/max(1,num_act)
         
         
     #we can also use the number of actors to compute teh similarity between the cast dimension
@@ -145,7 +145,7 @@ class NetflixReader:
         if num_directors == 0:
             return 0.1
         
-        return 2* num_commons / np.max(1,num_directors)
+        return 2* num_commons / max(1,num_directors)
 
 
     #The similarity between genres is given by the number of common genres
@@ -157,7 +157,7 @@ class NetflixReader:
         num_genres = genres_1.sum() + genres_2.sum()
         num_commons = (genres_1.multiply(genres_2)).sum()
         
-        return 2* num_commons / np.max(1,num_genres)
+        return 2* num_commons / max(1,num_genres)
         
         
     #As for the actors, we can use the "complexity" of the genres
