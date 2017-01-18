@@ -33,7 +33,8 @@ if TO_COMPUTE_SLIM:
     # Split in train and validation by holdout
     sub_train , sub_validation = holdout(add_train_urm, perc=0.95, clean_test=True)
 
-    print("Sub Train: {}, sub Validation: {}".format(sub_train.shape, sub_validation.shape))
+    print("SHAPES Sub Train: {}, sub Validation: {}".format(sub_train.shape, sub_validation.shape))
+    print("LENGTHS Sub Train: {}, sub Validation: {}".format(len(sub_train.nonzero[0]), len(sub_validation.nonzero[0])))
     indexes = sub_validation.nonzero()
 
     users_validation = np.unique(indexes[0])
