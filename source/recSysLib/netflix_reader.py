@@ -9,7 +9,8 @@ import math
 
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
-PRODUCTS_MATRIX_FILE = "../../datasources/netflix/f_prod_mat"
+PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
+NUM_PROD_MAT = 8
 
 
 class NetflixReader:
@@ -65,11 +66,11 @@ class NetflixReader:
         
         #try to load the matrix of products
         try:
-            self._prod_mat = np.load(PRODUCTS_MATRIX_FILE)
+            self._prod_mat = self._load_prod_mat()#TODO!
         except:
             print("Building features products matrix")
             self._build_products_matrix()
-            np.save(PRODUCTS_MATRIX_FILE, self._prod_mat)
+            self._store_prod_mat()
     
     
     ###CONVERT THE MATRIX TO A DICTIONARY###
@@ -93,9 +94,23 @@ class NetflixReader:
         num_items_each = math.ceil(self.numItems/num_proc)
         
         idx = list()
-        for start in range(0, self.numItems, num_items_each):
-            end = min(start + num_items_each, self.numItems)
+        start = 0
+        while True:
+            if start < self.numItems/3:
+                mutiplier = 0.5
+            elif start > self.numItems/3*2:
+                multiplier = 2
+            else:
+                multiplier = 1
+                
+            end = min(start + num_items_each*mutiplier, self.numItems)
             idx.append((start,end))
+            
+            start = end 
+            if start >= self.numItems:
+                break
+        
+        print(idx)
         
         pool = multiprocessing.Pool(processes = num_proc)
         res = pool.map(_help_compute_matrix, ((self, s, e) for (s,e) in idx))
