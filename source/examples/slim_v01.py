@@ -39,33 +39,34 @@ if TO_COMPUTE_SLIM:
     users_validation = np.unique(indexes[0])
 
     iteration = 0
-    for i in range(-1,4,2):
-        iteration += 1
-        l2 = 10**i
-        l1 = 10
-        #l2 = numbernp.float32(random.uniform(0, 10.0))
+    for i in [-100,100]:
+        for j in [-100,100]:
+            iteration += 1
+            l2 = i
+            l1 = j
+            #l2 = numbernp.float32(random.uniform(0, 10.0))
 
-        # Compute the model with the established parameters
-        model = slim.MultiThreadSLIM(l1_penalty=l1,l2_penalty=l2)
-        model.fit(sub_train)
-        weight_matrix = model.get_weight_matrix()
-        print("SLIM similarity nnz: ",len(weight_matrix.nonzero()[0]))
-        print("weight-matrix:",weight_matrix)
-        # Evaluation
-        n_eval = 0
-        metric_ = 0.0
-        metric_1 = 0.0
-        for user_to_test in users_validation:
-            #print("User: {} \n Item indices {}".format(user_to_test,sub_validation[user_to_test].indices))
-            relevant_items = sub_validation[user_to_test].indices
-            if len(relevant_items) > 0:
-                n_eval += 1
-                recommended_items = model.recommend(user_id=user_to_test, exclude_seen=True)
-                metric_ += precision(recommended_items, relevant_items)
-                metric_1 += recall(recommended_items, relevant_items)
-        metric_ /= n_eval
-        metric_1 /= n_eval
+            # Compute the model with the established parameters
+            model = slim.MultiThreadSLIM(l1_penalty=l1,l2_penalty=l2)
+            model.fit(sub_train)
+            weight_matrix = model.get_weight_matrix()
+            print("SLIM similarity nnz: ",len(weight_matrix.nonzero()[0]))
+            print("weight-matrix:",weight_matrix)
+            # Evaluation
+            n_eval = 0
+            metric_ = 0.0
+            metric_1 = 0.0
+            for user_to_test in users_validation:
+                #print("User: {} \n Item indices {}".format(user_to_test,sub_validation[user_to_test].indices))
+                relevant_items = sub_validation[user_to_test].indices
+                if len(relevant_items) > 0:
+                    n_eval += 1
+                    recommended_items = model.recommend(user_id=user_to_test, exclude_seen=True)
+                    metric_ += precision(recommended_items, relevant_items)
+                    metric_1 += recall(recommended_items, relevant_items)
+            metric_ /= n_eval
+            metric_1 /= n_eval
 
-        print("Iteration {} , l1 coeff: {}, precision: {}, recall : {}".format(iteration,l1,metric_,metric_1))
+            print("Iteration {} , l1 - l2 coeff: {}-{}, precision: {}, recall : {}".format(iteration,l1,l2,metric_,metric_1))
 else:
     weight_matrix = np.load('../../datasources/slim_W01.npz','csc')
