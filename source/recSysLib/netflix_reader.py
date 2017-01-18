@@ -3,10 +3,13 @@ import scipy.io as sio
 import numpy as np
 from difflib import SequenceMatcher
 import pickle
+import multiprocessing
+import math
+
 
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
-PRODUCTS_DICTIONARY_FILE = "../../datasources/netflix/f_prod_dict.pkl"
+PRODUCTS_MATRIX_FILE = "../../datasources/netflix/f_prod_mat.pkl"
 
 
 class NetflixReader:
@@ -60,15 +63,15 @@ class NetflixReader:
                 pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
         
         
-        #try to load the dictionary of products
+        #try to load the matrix of products
         try:
-            with open(PRODUCTS_DICTIONARY_FILE, 'rb') as f:
+            with open(PRODUCTS_MATRIX_FILE, 'rb') as f:
                 self._prod_dict = pickle.load(f)
         except:
-            print("Building features products dictionary")
-            self._build_products_dictionary()
-            with open(PRODUCTS_DICTIONARY_FILE, 'wb') as f:
-                    pickle.dump(self._prod_dict, f, pickle.HIGHEST_PROTOCOL)
+            print("Building features products matrix")
+            self._build_products_matrix()
+            with open(PRODUCTS_MATRIX_FILE, 'wb') as f:
+                    pickle.dump(self._prod_mat, f, pickle.HIGHEST_PROTOCOL)
     
     
     ###CONVERT THE MATRIX TO A DICTIONARY###
@@ -86,15 +89,22 @@ class NetflixReader:
             self._icm_dict[itemId].append(self._titles[itemId])
             
             
-    ###COMPUTE A DICTIONARY OF FEATURES PRODUCTS###
-    def _build_products_dictionary(self):          
-        self._prod_dict = {}
-        for movieId1 in range(0, self.numItems):
-            self._prod_dict[movieId1] = {}
-            for movieId2 in range(movieId1+1, self.numItems):
-                self._prod_dict[movieId1][movieId2] = self._similarity(movieId1, movieId2)
-    
-    
+    ###COMPUTE A MATRIX OF FEATURES PRODUCTS###
+    def _build_products_matrix(self):
+        num_proc = multiprocessing.cpu_count()
+        num_items_each = math.ceil(self.numItems/num_proc)
+        
+        idx = list()
+        for start in range(0, self.numItems, num_items_each):
+            end = min(start + num_items_each, self.numItems)
+            idx.append((start,end))
+        
+        pool = multiprocessing.Pool(processes = num_proc)
+        res = pool.map(_help_compute_matrix, ((self, s, e) for (s,e) in idx))
+        
+        self._prod_mat = np.concatenate(res)
+            
+
     
     #compute f_{i;actors} * f_{j;actors} by counting the number of common actors
     #TODO: is better to use the number of common actors or normalize it against the number of featured actors?
@@ -201,17 +211,32 @@ class NetflixReader:
         
     
     ###PUBLIC METHOD TO BE CALLED TO OBTAIN THE FEATURES PRODUCTS BETWEEN TWO ITEMS###
-    def get_similarity(i, j):
+    def get_similarity(self, i, j):
         if i == j:
             raise ValueError('Asking similarity of an item with itself')
         if i < j:
             return self._prod_dict[i][j]
         return self._prod_dict[j][i]
     
-    def get_similarity(ij):
-        return get_similarity(ij[0], ij[1])
+    def get_similarity_tuple(self, ij):
+        return self.get_similarity(ij[0], ij[1])
             
+
+###USED TO PARALLELY COMPUTE THE SIMILARITY MATRIX###
+#i1 end IS NOT COMPUTED
+def _help_compute_matrix(x):
+    (reader, i1start, i1end) = x
+    matrix = np.zeros((i1end-i1start, reader.numItems), dtype=object)
     
+    for movieId1 in range(i1start, i1end):
+        print(movieId1)
+        for movieId2 in range(movieId1+1, reader.numItems):
+            matrix[movieId1-i1start, movieId2] = reader._similarity(movieId1, movieId2)
+            
+    return matrix
+
+
+
 if __name__ == '__main__':
     a = NetflixReader()
     print("loaded")
@@ -221,7 +246,7 @@ if __name__ == '__main__':
 
     tic = time.time()
     pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
-    res=pool.map(a.get_similarity, ((i,j) for i in range(1,100) for j in range(i+1,100)))
+    res=pool.map(a.get_similarity_tuple, ((i,j) for i in range(1,100) for j in range(i+1,100)))
     toc = time.time()
     print("The parallel version took %f seconds" %(toc-tic))
     
