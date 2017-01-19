@@ -10,7 +10,7 @@ import math
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
 PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
-NUM_PROD_MAT = 24
+NUM_PROD_MAT = 21
 
 
 class NetflixReader:
@@ -79,11 +79,9 @@ class NetflixReader:
             np.save(PRODUCTS_MATRIX_DIR+str(i)+".npy", m)
 
     def _load_prod_mat(self):
-        m = list()
-        for i in range(1,NUM_PROD_MAT):
-            m.append(np.load(PRODUCTS_MATRIX_DIR+str(i)+".npy"))
-
-        self._prod_mat = np.concatenate(m)
+        self._prod_mat = list()
+        for i in range(NUM_PROD_MAT):
+            self._prod_mat.append(np.load(PRODUCTS_MATRIX_DIR+str(i)+".npy"))
 
 
     ###CONVERT THE MATRIX TO A DICTIONARY###
@@ -106,7 +104,8 @@ class NetflixReader:
         num_items_each = math.ceil(self.numItems/NUM_PROD_MAT)
 
         idx = list()
-        for start in range(0, self.numItems, num_items_each):
+        for i in range(NUM_PROD_MAT):
+            start = num_items_each * i
             end = min(start + num_items_each, self.numItems)
             idx.append((start,end))
         
@@ -225,9 +224,17 @@ class NetflixReader:
     def get_similarity(self, i, j):
         if i == j:
             raise ValueError('Asking similarity of an item with itself')
-        if i < j:
-            return self._prod_mat[i][j]
-        return self._prod_mat[j][i]
+        if i > j:
+            t = i
+            i = j
+            j = i
+        
+        #we have stored the data on separate matrix
+        num_items_each = math.ceil(self.numItems/NUM_PROD_MAT)
+        num_m = math.floor(i / num_items_each)
+        i_o = i % num_items_each
+        
+        return np.array(self._prod_mat[num_m][i_o,j], dtype=np.float32)
     
     def get_similarity_tuple(self, ij):
         return self.get_similarity(ij[0], ij[1])
@@ -257,13 +264,13 @@ if __name__ == '__main__':
 
     tic = time.time()
     pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
-    res=pool.map(a.get_similarity_tuple, ((i,j) for i in range(1,100) for j in range(i+1,100)))
+#    res=pool.map(a.get_similarity_tuple, ((i,j) for i in range(1,100) for j in range(i+1,100)))
     toc = time.time()
     print("The parallel version took %f seconds" %(toc-tic))
     
     tic = time.time()
-    for i in range(1,3000):
-        for j in range(i+1,3000):
+    for i in range(0,a.numItems):
+        for j in range(i+1,a.numItems):
             a.get_similarity(i,j)
     toc = time.time()
     print("The serial version took %f seconds" %(toc-tic))
