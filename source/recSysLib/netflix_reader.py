@@ -17,52 +17,56 @@ class NetflixReader:
     def __init__(self):
         self._urm = sio.loadmat(BASEFILE + "./urm.mat")['urm']
         self.numItems = self._urm.shape[1]
+        
+        self._icm = sio.loadmat(BASEFILE + "./icm.mat")
+        self._icm_matrix = self._icm['icm']
+        self._icm_dictionary = self._icm['dictionary']
+        self._icm_stems = self._icm_dictionary['stems'][0][0]
+        self._icm_stemtypes = self._icm_dictionary['stemTypes'][0][0]
+        self._titles = sio.loadmat(BASEFILE + "./titles.mat")['titles']
+        self._urm = sio.loadmat(BASEFILE + "./urm.mat")['urm']
+        
+        #Now let's try to aggregate the features
+        #The first group is composed by the actors
+        actor_features_names = ['ActorsLastNameFirstArray', 'ActorsLastNameFirstArray;DirectorsLastNameFirstArray']
+        self._actor_features = list()
+        for feature_name in actor_features_names:
+            self._actor_features.extend(np.where(self._icm_stemtypes == feature_name)[0].tolist())
+
+        #the second group of features is the country of production
+        county_features_names = ['ChannelName;CountryOfOrigin', 'CountryOfOrigin']
+        self._country_features = list()
+        for feature_name in county_features_names:
+            self._country_features.extend(np.where(self._icm_stemtypes == feature_name)[0].tolist())
+        
+        #the third group of features is the director, with just one name 
+        self._director_features = np.where(self._icm_stemtypes == 'DirectorsLastNameFirstArray')[0].tolist()
+
+        #we now have the genres.
+        #TODO: Bear in mind that some of these features are extracted from tags/stems so it could be worth separating them
+        genres_features_names = ['GenresArray', 'GenresArray;KeywordsArray', 'GenresArray;KeywordsArray;TitleFull', 'GenresArray;TitleFull']
+        self._genres_features = list()
+        for feature_name in genres_features_names:
+            self._genres_features.extend(np.where(self._icm_stemtypes == feature_name)[0].tolist())
+
+        #skip the tags (for now) TODO and go to miniseries
+        self._miniseries_features = np.where(self._icm_stemtypes == 'ShowType')[0].tolist()
+
+        #Skip the title as we have a separate file fo them and do the year
+        self._years_features = np.where(self._icm_stemtypes == 'Year')[0].tolist()
+        
+        
+        
+        
         #try to load the icm dictionary
         try:
             with open(ICM_DICTIONARY_FILE, 'rb') as f:
                 self._icm_dict = pickle.load(f)
         except:
             print("Building icm dictionary")
-        
-            self._icm_dictionary = self._icm['dictionary']
-            self._icm_stems = self._icm_dictionary['stems'][0][0]
-            self._icm_stemtypes = self._icm_dictionary['stemTypes'][0][0]
-            self._titles = sio.loadmat(BASEFILE + "./titles.mat")['titles']
-            self._urm = sio.loadmat(BASEFILE + "./urm.mat")['urm']
-            
-            #Now let's try to aggregate the features
-            #The first group is composed by the actors
-            actor_features_names = ['ActorsLastNameFirstArray', 'ActorsLastNameFirstArray;DirectorsLastNameFirstArray']
-            self._actor_features = list()
-            for feature_name in actor_features_names:
-                self._actor_features.extend(np.where(self._icm_stemtypes == feature_name)[0].tolist())
-
-            #the second group of features is the country of production
-            county_features_names = ['ChannelName;CountryOfOrigin', 'CountryOfOrigin']
-            self._country_features = list()
-            for feature_name in county_features_names:
-                self._country_features.extend(np.where(self._icm_stemtypes == feature_name)[0].tolist())
-            
-            #the third group of features is the director, with just one name 
-            self._director_features = np.where(self._icm_stemtypes == 'DirectorsLastNameFirstArray')[0].tolist()
-
-            #we now have the genres.
-            #TODO: Bear in mind that some of these features are extracted from tags/stems so it could be worth separating them
-            genres_features_names = ['GenresArray', 'GenresArray;KeywordsArray', 'GenresArray;KeywordsArray;TitleFull', 'GenresArray;TitleFull']
-            self._genres_features = list()
-            for feature_name in genres_features_names:
-                self._genres_features.extend(np.where(self._icm_stemtypes == feature_name)[0].tolist())
-
-            #skip the tags (for now) TODO and go to miniseries
-            self._miniseries_features = np.where(self._icm_stemtypes == 'ShowType')[0].tolist()
-
-            #Skip the title as we have a separate file fo them and do the year
-            self._years_features = np.where(self._icm_stemtypes == 'Year')[0].tolist()
-            
             self._build_feature_dictionary()
             with open(ICM_DICTIONARY_FILE, 'wb') as f:
                 pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
-        
         
         #try to load the matrix of products
         try:
@@ -72,6 +76,8 @@ class NetflixReader:
             self._build_products_matrix()
             self._store_prod_mat()
             self._load_prod_mat()
+    
+    
     
     def _store_prod_mat(self):
         for i in range(NUM_PROD_MAT):
