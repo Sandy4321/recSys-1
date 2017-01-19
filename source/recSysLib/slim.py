@@ -108,6 +108,12 @@ class Slim(Recommender):
         scores = user_profile.dot(self.W_sparse).toarray().ravel()
         print(scores)
 
+    def set_weight_matrix(self, W):
+        self.W_sparse = W
+
+    def set_urm_matrix(self, X):
+        self.dataset = X
+
 from multiprocessing import Pool
 from functools import partial
 
