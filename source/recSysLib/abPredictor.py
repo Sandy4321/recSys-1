@@ -6,8 +6,8 @@ from lasagne.layers import InputLayer, GaussianNoiseLayer, DenseLayer
 from lasagne.regularization import l2, regularize_network_params
 import lasagne
 import scipy
+from sklearn.cross_validation import train_test_split
 from netflix_reader import  NetflixReader
-import multiprocessing
 
 
 NUM_FEATURES = 9
@@ -19,12 +19,13 @@ NUM_EPOCHS = 1000
 
 VAL_PERCENTAGE = 0.1
 
-BASE_FILE = "../datasources/ab/"
+BASE_FILE = "../../datasources/ab/"
 AB_FILE_X_TRAIN = BASE_FILE + "X_train.npy"
 AB_FILE_X_VAL = BASE_FILE + "X_val.npy"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
 AB_FILE_Y_VAL = BASE_FILE + "Y_val.npy"
 FILE = BASE_FILE + "ab_model.npz"
+SLIM_FILE = "../../datasources/slim_W01.npy"
 
 
 class abPredictor:
@@ -103,9 +104,7 @@ class abPredictor:
             
             
     ###TRAIN THE NETWORK###
-    def _train_network(self, network, train_fn, val_fn, X_train, y_train, X_val, y_val, num_epochs, verbose = False, save_all=True):
-        import time
-        
+    def _train_network(self, network, train_fn, val_fn, X_train, y_train, X_val, y_val, num_epochs, verbose = False, save_all=True):        
         # Launch the training loop.
         # We iterate over epochs:
         for epoch in range(num_epochs):        
@@ -146,9 +145,9 @@ class abPredictor:
 
         print("LR\t\tL2\t\tGS\tTrain Loss\tVal Loss")
         for i in range(10):
-            #learning_rate.set_value(np.float32(random.uniform(0.001, 0.0001)))
-            #l2_lambda.set_value(np.float32(random.uniform(0.00000001, 0.00000100)))
-            gaussian_noise_sigma.set_value(np.float32(random.uniform(0.,0.05)))
+            #self._lr.set_value(np.float32(random.uniform(0.001, 0.0001)))
+            #self._l2.set_value(np.float32(random.uniform(0.00000001, 0.00000100)))
+            self._sigma.set_value(np.float32(random.uniform(0.,0.05)))
             
             network, train_loss, val_loss = _train_network(network, self._train_fn, self._val_fn,
                                                            X_train, y_train, X_val, y_val,
@@ -178,13 +177,10 @@ class abPredictor:
         
         
     ###CREATE THE DATASET###
-    #TODO: REFACTOR
     def _create_dataset(self):
         #load the slim matrix and the netflix dataset
-        weight_matrix = np.load('../../datasources/slim_W01.npz')
-        from netflix_reader import  NetflixReader
+        weight_matrix = np.load(SLIM_FILE)
         rdr = NetflixReader()
-        from sklearn.cross_validation import train_test_split
         
         #get all the couple of items with a non zero similarity
         idx = weight_matrix.nonzero()
@@ -193,7 +189,7 @@ class abPredictor:
         ys = list()
         
         for (i1,i2) in zip(idx[0], idx[1]):
-            x = rdr.similarity(i1,i2)
+            x = rdr.get_similarity(i1,i2)
             y = weight_matrix[i1,i2]
             
             Xs.append(x)
@@ -211,18 +207,28 @@ class abPredictor:
         
         
     ###COMPUTE THE SIMILARITY MATRIX USING THE NETWORK###
+    #TODO
     def _compute_sim_matrix(self):
         rdr = NetflixReader()
-        matrix = scipy.sparse.csc_matrix((6489,6489), dtype=np.float32)
-        
-        #our similarity measure is symmetric
-        pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
+        matrix = numpy.zeros((rdr.numItems,rdr.numItems), dtype=np.float32)
         
         print("Computing products")
-        features_products=pool.map(rdr.similarity_tuple, ((i,j) for i in range(1,50) for j in range(i+1,50)))
-        print("Computing similarities")
-        similarities = self._predict_fn(np.array(features_products, dtype = np.float32))
+        products = list()
+        indices = list()
+        for movieId1 in range(0, rdr.numItems):
+            for movieId2 in range(movieId1+1, rdr.numItems):
+                products.append(rdr.get_similarity(movieId1, movieId2))
+                indices.append((movieId1, movieId2))
+        print(len(products))
+        
+        similarities = self._predict_fn(np.array(products, dtype = np.float32))
         print(similarities.shape)
+        
+        for (idx, sim) in zip(indices, similarities):
+            matrix[idx[0], idx[1]] = sim
+            matrix[idx[1], idx[0]] = sim
+        
+        return matrix       
         
     
 if __name__ == '__main__':
