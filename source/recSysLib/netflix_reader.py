@@ -10,7 +10,7 @@ import math
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
 PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
-NUM_PROD_MAT = 8
+NUM_PROD_MAT = 24
 
 
 class NetflixReader:
@@ -66,13 +66,26 @@ class NetflixReader:
         
         #try to load the matrix of products
         try:
-            self._prod_mat = self._load_prod_mat()#TODO!
+            self._load_prod_mat()
         except:
             print("Building features products matrix")
             self._build_products_matrix()
             self._store_prod_mat()
+            self._load_prod_mat()
     
-    
+    def _store_prod_mat(self):
+        for i in range(NUM_PROD_MAT):
+            m = self._prod_mat[i]
+            np.save(PRODUCTS_MATRIX_DIR+str(i)+".npy", m)
+
+    def _load_prod_mat(self):
+        m = list()
+        for i in range(1,NUM_PROD_MAT):
+            m.append(np.load(PRODUCTS_MATRIX_DIR+str(i)+".npy"))
+
+        self._prod_mat = np.concatenate(m)
+
+
     ###CONVERT THE MATRIX TO A DICTIONARY###
     def _build_feature_dictionary(self):
         self._icm_dict = {}
@@ -90,32 +103,17 @@ class NetflixReader:
             
     ###COMPUTE A MATRIX OF FEATURES PRODUCTS###
     def _build_products_matrix(self):
-        num_proc = multiprocessing.cpu_count()
-        num_items_each = math.ceil(self.numItems/num_proc)
-        
+        num_items_each = math.ceil(self.numItems/NUM_PROD_MAT)
+
         idx = list()
-        start = 0
-        while True:
-            if start < self.numItems/3:
-                mutiplier = 0.5
-            elif start > self.numItems/3*2:
-                multiplier = 2
-            else:
-                multiplier = 1
-                
-            end = min(start + num_items_each*mutiplier, self.numItems)
+        for start in range(0, self.numItems, num_items_each):
+            end = min(start + num_items_each, self.numItems)
             idx.append((start,end))
-            
-            start = end 
-            if start >= self.numItems:
-                break
         
-        print(idx)
-        
-        pool = multiprocessing.Pool(processes = num_proc)
+        pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
         res = pool.map(_help_compute_matrix, ((self, s, e) for (s,e) in idx))
         
-        self._prod_mat = np.concatenate(res)
+        self._prod_mat = res
             
 
     
@@ -228,8 +226,8 @@ class NetflixReader:
         if i == j:
             raise ValueError('Asking similarity of an item with itself')
         if i < j:
-            return self._prod_dict[i][j]
-        return self._prod_dict[j][i]
+            return self._prod_mat[i][j]
+        return self._prod_mat[j][i]
     
     def get_similarity_tuple(self, ij):
         return self.get_similarity(ij[0], ij[1])
@@ -264,8 +262,8 @@ if __name__ == '__main__':
     print("The parallel version took %f seconds" %(toc-tic))
     
     tic = time.time()
-    for i in range(1,100):
-        for j in range(i+1,100):
+    for i in range(1,3000):
+        for j in range(i+1,3000):
             a.get_similarity(i,j)
     toc = time.time()
     print("The serial version took %f seconds" %(toc-tic))
