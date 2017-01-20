@@ -86,6 +86,8 @@ class NetflixReader:
         except:
             print("Building icm dictionary")
             self._build_feature_dictionary()
+            print("Building reduced icm dictionary")
+            self._build_reduced_feature_dict()
             with open(ICM_DICTIONARY_FILE, 'wb') as f:
                 pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
         
@@ -264,8 +266,26 @@ class NetflixReader:
             self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
             self._icm_dict[itemId].append(self._titles[itemId])
             
-            
+    def _build_reduced_feature_dict(self):
+        self._icm_reduced_dict = {}
+        for itemId in range(0, self._icm_matrix.shape[1]):
+            self._icm_dict[itemId] = list()
+            # Equivalent but reduced
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_actor_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_country_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_director_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_genres_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._miniseries_features, itemId].astype(bool).toarray()[0][0])
+            # Not reduced
+            year_feat = self._icm_matrix[self._years_features, itemId].astype(bool).indices[0]
+            self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
+            self._icm_dict[itemId].append(self._titles[itemId])
+
+            # Additional feature ( tag)
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_tag_indexes, itemId].astype(bool))
+
     ###COMPUTE A MATRIX OF FEATURES PRODUCTS###
+    
     def _build_products_matrix(self):
         num_items_each = math.ceil(self.numItems/NUM_PROD_MAT)
 
