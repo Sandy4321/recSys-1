@@ -89,7 +89,7 @@ else:
 
 
 #C) EVALUATION
-
+print("EVALUATION")
 #print("\nTEST URM MATRIX.nonzero()",test_URMmatrix.nonzero())
 #print("\nIndexes unique",np.unique(test_URMmatrix.nonzero()[0]))
 
@@ -99,8 +99,10 @@ metric_1 = 0.0
 iteration = 0
 
 # Compute residual and sampled matrices. (holdout for evaluation)
-model.decompose_urm_matrix(k, verbose = 0)
+print("DECOMPOSITION")
+model.decompose_urm_matrix(k, verbose = 1)
 # Set of learning matrix as the sampled_csc
+print("PRE-EVAL")
 model.set_urm_matrix(model.get_sampled_csc())
 #print(weight_matrix)
 

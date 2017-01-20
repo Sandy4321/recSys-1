@@ -124,18 +124,21 @@ class Slim(Recommender):
 
     def decompose_urm_matrix(self, k, verbose = 0):
         self.original_dataset = self.dataset
+        iteration = 0
         list_users = np.unique(self.dataset.nonzero()[0])
         csc_residual_dataset = sps.lil_matrix(self.dataset.shape)
         csc_sampled_dataset = sps.lil_matrix(self.dataset.shape)
         for u in list_users:
+            iteration += 1
             user_profile = self.dataset[u,:]
-            if verbose > 0:
-                print("\nUser {} profile:".format(u),user_profile)
+            if verbose > 0 and iteration%500 == 0:
+                print("\nUser {}".format(u))
+                #print("Profile:",user_profile)
             rated_items = list(user_profile.nonzero()[1])
             if len(rated_items) > k:
                 sampled_items = random.sample(rated_items,k)
                 residual_items = list(set(rated_items) - set(sampled_items))
-                if verbose > 0:
+                if verbose > 1:
                     print("All items",rated_items)
                     print("Sampled items type: {}, {}".format(type(sampled_items),sampled_items))
                     print("Residual items ",residual_items)
