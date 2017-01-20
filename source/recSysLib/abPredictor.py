@@ -40,7 +40,7 @@ SLIM_FILE = "../../datasources/slimW_0.1_1000.npz"
 class abPredictor:
     def __init__(self):
         #define network
-        self._input_var = T.matrix('inputs')
+        self._input_var = T.tensor3('inputs')
         self._target_var = T.matrix('targets')
         self._sigma = theano.shared(np.float32(GAUSSIAN_NOISE_SIGMA))
         print("Creating network")
@@ -96,7 +96,7 @@ class abPredictor:
     ###NETWORK DEFINITION###
     def _define_ab_network_linear(self, input_var, num_features, sigma):
         net = {}
-        net['input'] = InputLayer(shape=(None, num_features), input_var=input_var)
+        net['input'] = InputLayer(shape=(None, num_features, 1), input_var=input_var)
         net['noise'] = GaussianNoiseLayer(net['input'], sigma=sigma)
         net['out'] = DenseLayer(net['noise'], num_units=1, nonlinearity=lasagne.nonlinearities.rectify)
         return net['out']
@@ -221,7 +221,7 @@ class abPredictor:
         print("Loaded products matrix (x)")
         
         #get all the couple of items with a non zero similarity
-        idx = weight_matrix.nonzero()
+        idx = weight_matrix[:500,:500].nonzero()
         print("We have %d items to compute:" %(len(idx[0])))
 
         Xs = list()
@@ -238,7 +238,7 @@ class abPredictor:
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = np.array(s(i1,i2), dtype=np.float32)
+            x = s(i1,i2).toarray()
 
             y = weight_matrix[i1,i2]
             
