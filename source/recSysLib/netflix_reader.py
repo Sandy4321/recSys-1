@@ -5,10 +5,12 @@ from difflib import SequenceMatcher
 import pickle
 import multiprocessing
 import math
+import scipy
 
 
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
+ICM_RED_DICTIONARY_FILE = "../../datasources/netflix/icm_red_dict.pkl"
 PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
 NUM_PROD_MAT = 21
 
@@ -61,23 +63,6 @@ class NetflixReader:
         #Skip the title as we have a separate file fo them and do the year
         self._years_features = np.where(self._icm_stemtypes == 'Year')[0].tolist()
         
-        # Sorting features by frequencies
-        self._sort_tag_by_pop()
-        self._sort_genres_by_pop()
-        self._sort_actor_by_pop()
-        self._sort_country_by_pop()
-        self._sort_director_by_pop()
-        print("Features sorting")
-
-        # Features cutting
-        cutting_thresholds = {'tag':6,'genres':2,'actor':5,'country':2,'director':2}
-        self._cut_tag_by_pop(cutting_thresholds['tag'])
-        self._cut_genres_by_pop(cutting_thresholds['genres'])
-        self._cut_actor_by_pop(cutting_thresholds['actor'])
-        self._cut_country_by_pop(cutting_thresholds['country'])
-        self._cut_director_by_pop(cutting_thresholds['director'])
-        print("Features cut")
-
 
         #try to load the icm dictionary
         try:
@@ -86,10 +71,33 @@ class NetflixReader:
         except:
             print("Building icm dictionary")
             self._build_feature_dictionary()
-            print("Building reduced icm dictionary")
-            self._build_reduced_feature_dict()
             with open(ICM_DICTIONARY_FILE, 'wb') as f:
                 pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
+                
+        try:
+            with open(ICM_RED_DICTIONARY_FILE, 'rb') as f:
+                self._icm_reduced_dict = pickle.load(f)
+        except:
+            print("Building reduced icm dictionary")
+            self._sort_tag_by_pop()
+            self._sort_genres_by_pop()
+            self._sort_actor_by_pop()
+            self._sort_country_by_pop()
+            self._sort_director_by_pop()
+            print("Features sorted")
+
+            # Features cutting
+            cutting_thresholds = {'tag':6,'genres':2,'actor':5,'country':2,'director':2}
+            self._cut_tag_by_pop(cutting_thresholds['tag'])
+            self._cut_genres_by_pop(cutting_thresholds['genres'])
+            self._cut_actor_by_pop(cutting_thresholds['actor'])
+            self._cut_country_by_pop(cutting_thresholds['country'])
+            self._cut_director_by_pop(cutting_thresholds['director'])
+            print("Features cut")
+            
+            self._build_reduced_feature_dict()
+            with open(ICM_RED_DICTIONARY_FILE, 'wb') as f:
+                pickle.dump(self._icm_reduced_dict, f, pickle.HIGHEST_PROTOCOL)
         
         #try to load the matrix of products
         try:
@@ -269,20 +277,20 @@ class NetflixReader:
     def _build_reduced_feature_dict(self):
         self._icm_reduced_dict = {}
         for itemId in range(0, self._icm_matrix.shape[1]):
-            self._icm_dict[itemId] = list()
+            self._icm_reduced_dict[itemId] = list()
             # Equivalent but reduced
-            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_actor_indexes, itemId].astype(bool))
-            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_country_indexes, itemId].astype(bool))
-            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_director_indexes, itemId].astype(bool))
-            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_genres_indexes, itemId].astype(bool))
-            self._icm_dict[itemId].append(self._icm_matrix[self._miniseries_features, itemId].astype(bool).toarray()[0][0])
+            self._icm_reduced_dict[itemId].append(self._icm_matrix[self._reduced_actor_indexes, itemId].astype(bool))
+            self._icm_reduced_dict[itemId].append(self._icm_matrix[self._reduced_country_indexes, itemId].astype(bool))
+            self._icm_reduced_dict[itemId].append(self._icm_matrix[self._reduced_director_indexes, itemId].astype(bool))
+            self._icm_reduced_dict[itemId].append(self._icm_matrix[self._reduced_genres_indexes, itemId].astype(bool))
+            self._icm_reduced_dict[itemId].append(self._icm_matrix[self._miniseries_features, itemId].astype(bool).toarray()[0][0])
             # Not reduced
             year_feat = self._icm_matrix[self._years_features, itemId].astype(bool).indices[0]
-            self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
-            self._icm_dict[itemId].append(self._titles[itemId])
+            self._icm_reduced_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
+            self._icm_reduced_dict[itemId].append(self._titles[itemId])
 
             # Additional feature ( tag)
-            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_tag_indexes, itemId].astype(bool))
+            self._icm_reduced_dict[itemId].append(self._icm_matrix[self._reduced_tag_indexes, itemId].astype(bool))
 
     ###COMPUTE A MATRIX OF FEATURES PRODUCTS###
     
@@ -389,7 +397,7 @@ class NetflixReader:
     #The similarity of two titles is the number of common words
     def _similarity_titles(self, movieId1, movieId2):
         title_1 = self._icm_dict[movieId1][6]
-        title_2 = self._icm_dict[movieId1][6]
+        title_2 = self._icm_dict[movieId2][6]
         return SequenceMatcher(lambda x: x in " \t", title_1.lower(), title_2.lower()).ratio() #skip the blanks
     
     
@@ -404,7 +412,20 @@ class NetflixReader:
                 self._similarity_miniseries(movieId1, movieId2),
                 self._similarity_years(movieId1, movieId2),
                 self._similarity_titles(movieId1, movieId2))
-        
+    
+    
+    def _similarity_features(self, movieId1, movieId2):
+        return scipy.sparse.vstack((
+            self._icm_reduced_dict[movieId1][0].multiply(self._icm_reduced_dict[movieId2][0]),
+            self._icm_reduced_dict[movieId1][1].multiply(self._icm_reduced_dict[movieId2][1]),
+            self._icm_reduced_dict[movieId1][2].multiply(self._icm_reduced_dict[movieId2][2]),
+            self._icm_reduced_dict[movieId1][3].multiply(self._icm_reduced_dict[movieId2][3]),
+            self._icm_reduced_dict[movieId1][4] * self._icm_reduced_dict[movieId2][4],
+            [self._similarity_years(movieId1, movieId2)],
+            [self._similarity_titles(movieId1, movieId2)],
+            self._icm_reduced_dict[movieId1][7].multiply(self._icm_reduced_dict[movieId2][7])
+            ))
+    
     
     ###PUBLIC METHOD TO BE CALLED TO OBTAIN THE FEATURES PRODUCTS BETWEEN TWO ITEMS###
     def get_similarity(self, i, j):
