@@ -9,13 +9,17 @@ import scipy
 from sklearn.model_selection import train_test_split
 from netflix_reader import  NetflixReader
 import joblib
+import random
+import time
 
+USE_LINEAR_MODEL = False
+NUM_HIDDEN_UNITS = 30
 NUM_FEATURES = 9
 GAUSSIAN_NOISE_SIGMA = 0.
-LEARNING_RATE = 0.001
-L2_LAMBDA = 0.
+LEARNING_RATE = 0.
+L2_LAMBDA = 0.1
 
-NUM_EPOCHS = 1000
+NUM_EPOCHS = 200
 
 VAL_PERCENTAGE = 0.1
 
@@ -35,7 +39,10 @@ class abPredictor:
         self._target_var = T.matrix('targets')
         self._sigma = theano.shared(np.float32(GAUSSIAN_NOISE_SIGMA))
         print("Creating network")
-        self._net = self._define_ab_network_linear(self._input_var, NUM_FEATURES, self._sigma)
+        if USE_LINEAR_MODEL:
+            self._net = self._define_ab_network_linear(self._input_var, NUM_FEATURES, self._sigma)
+        else:
+            self._net = self._define_ab_network_mlp(self._input_var, NUM_FEATURES, self._sigma, NUM_HIDDEN_UNITS)
         
         #load old parameters to continue training
         try:
@@ -87,9 +94,16 @@ class abPredictor:
         net['input'] = InputLayer(shape=(None, num_features), input_var=input_var)
         net['noise'] = GaussianNoiseLayer(net['input'], sigma=sigma)
         net['out'] = DenseLayer(net['noise'], num_units=1, nonlinearity=lasagne.nonlinearities.rectify)
-        
         return net['out']
     
+    def _define_ab_network_mlp(self, input_var, num_features, sigma, num_hidden):
+        net = {}
+        net ['input'] = InputLayer(shape=(None, num_features), input_var=input_var)
+        net['noise'] = GaussianNoiseLayer(net['input'], sigma=sigma)
+        net['hidden'] = DenseLayer(net['noise'], num_units=num_hidden, nonlinearity=lasagne.nonlinearities.sigmoid)
+        net['out'] = DenseLayer(net['hidden'], num_units=1, nonlinearity=lasagne.nonlinearities.rectify)
+        return net['out']
+
     
     
     ###COMPILE LEARNNG FUNCTIONS###
@@ -101,16 +115,16 @@ class abPredictor:
         
         loss = lasagne.objectives.squared_error(out, target_var)
         l2_loss = l2_lambda * regularize_network_params(network, l2)
-        loss = loss.mean() + l2_loss
+        loss = loss.sum() + l2_loss
         
         test_loss = lasagne.objectives.squared_error(test_out, target_var)
-        test_loss = test_loss.mean() + l2_loss
+        test_loss = test_loss.sum() + l2_loss
         
         updates = lasagne.updates.adam(loss, params, lr)
         
         train_fn = theano.function([input_var, target_var], [loss, l2_loss], updates=updates)
         val_fn = theano.function([input_var, target_var], [test_loss, l2_loss])
-        predict_fn = theano.function([input_var], [test_out])
+        predict_fn = theano.function([input_var], test_out)
         
         return (train_fn, val_fn, predict_fn)
             
@@ -140,7 +154,7 @@ class abPredictor:
                 FILE_TMP = FILE + "_partial/" + str(epoch) + ".npz"
                 np.savez(FILE_TMP, *lasagne.layers.get_all_param_values(network))
         
-        return network, train_err, val_err
+        return network, train_err, val_err, train_err_l2, val_err_l2
     
     
     
@@ -157,20 +171,20 @@ class abPredictor:
 
         #get initial values
         t_loss, t_l2 = self._val_fn(X_val, y_val)     
-        print("Initial  valid. loss:\t\t{:.6f}".format(t_loss))
+        print("Initial  valid. loss:\t\t%.8f" %(t_loss))
 
 
-        print("LR\t\tL2\t\tGS\tTrain Loss\tVal Loss")
-        for i in range(10):
-            #self._lr.set_value(np.float32(random.uniform(0.001, 0.0001)))
-            #self._l2.set_value(np.float32(random.uniform(0.00000001, 0.00000100)))
-            self._sigma.set_value(np.float32(random.uniform(0.,0.05)))
+        print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain l2\tVal l2")
+        for i in range(0,11):
+            #self._lr.set_value(10**i)#np.float32(random.uniform(0.001, 0.0001)))
+            #self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
+            self._sigma.set_value(i/10)#np.float32(random.uniform(0.,0.05)))
             
-            network, train_loss, val_loss = self._train_network(network, self._train_fn, self._val_fn,
+            network, train_loss, val_loss, t_l2, v_l2 = self._train_network(network, self._train_fn, self._val_fn,
                                                            X_train, y_train, X_val, y_val,
                                                            NUM_EPOCHS, verbose = False, save_all=True)
             
-            print("%.8f\t%.8f\t%.8f\t%.8f\t%.8f" % (learning_rate.get_value(), l2_lambda.get_value(), gaussian_noise_sigma.get_value(), train_loss, val_loss))
+            print("%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" % (self._lr.get_value(), self._l2.get_value(), self._sigma.get_value(), train_loss, val_loss, t_l2, v_l2))
         
             #save the models	
             FILE_TMP = FILE + "_partial/" + str(i) + ".npz"
@@ -246,21 +260,23 @@ class abPredictor:
         
     ###COMPUTE THE SIMILARITY MATRIX USING THE NETWORK###
     #TODO
-    def _compute_sim_matrix(self):
+    def _compute_sim_matrix(self, n_items=None):
         rdr = NetflixReader()
-        matrix = numpy.zeros((rdr.numItems,rdr.numItems), dtype=np.float32)
+        if n_items == None:
+            n_items = rdr.numItems
+        matrix = np.zeros((n_items,n_items), dtype=np.float32)
         
         print("Computing products")
         products = list()
         indices = list()
-        for movieId1 in range(0, rdr.numItems):
-            for movieId2 in range(movieId1+1, rdr.numItems):
-                products.append(rdr.get_similarity(movieId1, movieId2))
+        for movieId1 in range(0, n_items):
+            for movieId2 in range(movieId1+1, n_items):
+                products.append(np.array(rdr._similarity(movieId1, movieId2), dtype=np.float32))
                 indices.append((movieId1, movieId2))
         print(len(products))
         
-        similarities = self._predict_fn(np.array(products, dtype = np.float32))
-        print(similarities.shape)
+        similarities = self._predict_fn(np.array(products))
+        print(len(similarities))
         
         for (idx, sim) in zip(indices, similarities):
             matrix[idx[0], idx[1]] = sim
@@ -271,4 +287,4 @@ class abPredictor:
     
 if __name__ == '__main__':
     a = abPredictor()
-    a.explore_hyperparameters()
+    a.fit_network()
