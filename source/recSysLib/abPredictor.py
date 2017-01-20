@@ -67,8 +67,8 @@ class abPredictor:
         #load the dataset
         print("Loading data")
         try:
-            self._X_train = np.load(AB_FILE_X_TRAIN)
-            self._X_val = np.load(AB_FILE_X_VAL)
+            self._X_train = self._toarray(np.load(AB_FILE_X_TRAIN))
+            self._X_val = self._toarray(np.load(AB_FILE_X_VAL))
             self._y_train = np.load(AB_FILE_Y_TRAIN)
             self._y_val = np.load(AB_FILE_Y_VAL)
             self._print_data_dim()
@@ -82,6 +82,12 @@ class abPredictor:
             self._print_data_dim()
 
 
+
+    def _toarray(self, thing):
+        new = list()
+        for i in range(len(thing)):
+            new.append(thing[i].toarray().astype(np.float32))
+        return np.array(new)
 
    ###PRINT FIMENSION OF DATA VECTORS###
     def _print_data_dim(self):
@@ -222,7 +228,7 @@ class abPredictor:
         
         #get all the couple of items with a non zero similarity
         idx = weight_matrix[:500,:500].nonzero()
-        print("We have %d items to compute:" %(len(idx[0])))
+        print("We have %d couples of items to compute:" %(len(idx[0])))
 
         Xs = list()
         ys = list()
@@ -238,7 +244,7 @@ class abPredictor:
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = s(i1,i2).toarray()
+            x = s(i1,i2)
 
             y = weight_matrix[i1,i2]
             
