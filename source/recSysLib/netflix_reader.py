@@ -26,6 +26,12 @@ class NetflixReader:
         self._titles = sio.loadmat(BASEFILE + "./titles.mat")['titles']
         self._urm = sio.loadmat(BASEFILE + "./urm.mat")['urm']
         
+        # Tag Aggregation
+        tag_features_names = ['KeywordsArray','KeywordsArray;TitleFull']
+        self._tag_features = list()
+        for feature_name in tag_features_names:
+            self._tag_features.extend(np.where(self._icm_stemtypes == feature_name)[0].tolist())
+
         #Now let's try to aggregate the features
         #The first group is composed by the actors
         actor_features_names = ['ActorsLastNameFirstArray', 'ActorsLastNameFirstArray;DirectorsLastNameFirstArray']
@@ -55,9 +61,24 @@ class NetflixReader:
         #Skip the title as we have a separate file fo them and do the year
         self._years_features = np.where(self._icm_stemtypes == 'Year')[0].tolist()
         
-        
-        
-        
+        # Sorting features by frequencies
+        self._sort_tag_by_pop()
+        self._sort_genres_by_pop()
+        self._sort_actor_by_pop()
+        self._sort_country_by_pop()
+        self._sort_director_by_pop()
+        print("Features sorting")
+
+        # Features cutting
+        cutting_thresholds = {'tag':6,'genres':2,'actor':5,'country':2,'director':2}
+        self._cut_tag_by_pop(cutting_thresholds['tag'])
+        self._cut_genres_by_pop(cutting_thresholds['genres'])
+        self._cut_actor_by_pop(cutting_thresholds['actor'])
+        self._cut_country_by_pop(cutting_thresholds['country'])
+        self._cut_director_by_pop(cutting_thresholds['director'])
+        print("Features cut")
+
+
         #try to load the icm dictionary
         try:
             with open(ICM_DICTIONARY_FILE, 'rb') as f:
@@ -65,6 +86,8 @@ class NetflixReader:
         except:
             print("Building icm dictionary")
             self._build_feature_dictionary()
+            print("Building reduced icm dictionary")
+            self._build_reduced_feature_dict()
             with open(ICM_DICTIONARY_FILE, 'wb') as f:
                 pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
         
@@ -78,13 +101,106 @@ class NetflixReader:
             self._store_prod_mat()
             self._load_prod_mat()
     
-    def test_sorting(self):
+    def test_sorting(self, verbose = 0):
+        self._sort_tag_by_pop()
+        if verbose > 0:
+            print("Sorting by tag: completed!")
         self._sort_genres_by_pop()
+        if verbose > 0:
+            print("Sorting by genres: completed!")
         self._sort_actor_by_pop()
+        if verbose > 0:
+            print("Sorting by actor: completed!")
         self._sort_country_by_pop()
+        if verbose > 0:
+            print("Sorting by country: completed!")
         self._sort_director_by_pop()
-        print("SORTING: \ngenres:{}, \nactor:{}, \ncountry:{}, \ndirector:{}".format(self._genres_features_sorted,self._actor_features_sorted,self._country_features_sorted,self._director_features_sorted))
+        if verbose > 0:
+            print("Sorting by director: completed!")
+            print("SORTING: \ngenres:{}, \nactor:{}, \ncountry:{}, \ndirector:{}".format(self._genres_features_sorted,self._actor_features_sorted,self._country_features_sorted,self._director_features_sorted))
 
+    def test_cut(self, verbose = 0):
+        for k in range(1,10) :
+            if verbose > 0:
+                print("\n\n===CUTTING {}===".format(k))
+                print("\nGenres:")
+            self._cut_genres_by_pop(k)
+            if verbose > 0:
+                print("\nActor:")
+            self._cut_actor_by_pop(k)
+            if verbose > 0:
+                print("\nCountry:")
+            self._cut_country_by_pop(k)
+            if verbose > 0:
+                print("\nDirector:")
+            self._cut_director_by_pop(k)
+            if verbose > 0:
+                print("\nTag:")
+            self._cut_tag_by_pop(k)
+
+    def _cut_tag_by_pop(self, k, verbose = 0):
+        list_cutted_features = []
+        for couple in self._tag_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                if verbose > 0:
+                    print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._tag_features_sorted)))
+                self._reduced_tag_indexes = list_cutted_features
+                return
+            list_cutted_features.append(ind)
+
+    def _cut_genres_by_pop(self, k, verbose = 0):
+        list_cutted_features = []
+        for couple in self._genres_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                if verbose>0:
+                    print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._genres_features_sorted)))
+                self._reduced_genres_indexes = list_cutted_features
+                return
+            list_cutted_features.append(ind)
+
+    def _cut_actor_by_pop(self, k, verbose = 0):
+        list_cutted_features = []
+        for couple in self._actor_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                if verbose > 0:
+                    print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._actor_features_sorted)))
+                self._reduced_actor_indexes = list_cutted_features
+                return
+            list_cutted_features.append(ind)
+
+    def _cut_country_by_pop(self, k, verbose = 0):
+        list_cutted_features = []
+        for couple in self._country_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                if verbose > 0:
+                    print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._country_features_sorted)))
+                self._reduced_country_indexes = list_cutted_features
+                return
+            list_cutted_features.append(ind)
+
+    def _cut_director_by_pop(self, k, verbose = 0):
+        list_cutted_features = []
+        for couple in self._director_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                if verbose > 0:
+                    print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._director_features_sorted)))
+                self._reduced_director_indexes = list_cutted_features
+                return
+            list_cutted_features.append(ind)
+
+    def _sort_tag_by_pop(self):
+        list_tuples = []
+        tag_indexes = self._tag_features
+        for tag_index in tag_indexes:
+            list_tuples.append((tag_index,len(self._icm_matrix[tag_index,:].nonzero()[1])))
+
+        list_tuples.sort(key=lambda tup: tup[1],reverse=True)
+        self._tag_features_sorted = list_tuples
 
     def _sort_genres_by_pop(self):
         list_tuples = []
@@ -150,8 +266,26 @@ class NetflixReader:
             self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
             self._icm_dict[itemId].append(self._titles[itemId])
             
-            
+    def _build_reduced_feature_dict(self):
+        self._icm_reduced_dict = {}
+        for itemId in range(0, self._icm_matrix.shape[1]):
+            self._icm_dict[itemId] = list()
+            # Equivalent but reduced
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_actor_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_country_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_director_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_genres_indexes, itemId].astype(bool))
+            self._icm_dict[itemId].append(self._icm_matrix[self._miniseries_features, itemId].astype(bool).toarray()[0][0])
+            # Not reduced
+            year_feat = self._icm_matrix[self._years_features, itemId].astype(bool).indices[0]
+            self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
+            self._icm_dict[itemId].append(self._titles[itemId])
+
+            # Additional feature ( tag)
+            self._icm_dict[itemId].append(self._icm_matrix[self._reduced_tag_indexes, itemId].astype(bool))
+
     ###COMPUTE A MATRIX OF FEATURES PRODUCTS###
+    
     def _build_products_matrix(self):
         num_items_each = math.ceil(self.numItems/NUM_PROD_MAT)
 
@@ -313,8 +447,6 @@ if __name__ == '__main__':
     
     import time
     import multiprocessing
-
-    a.test_sorting()
 
     tic = time.time()
     pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
