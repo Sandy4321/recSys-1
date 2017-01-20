@@ -70,15 +70,61 @@ class NetflixReader:
         
         #try to load the matrix of products
         try:
-            self._load_prod_mat()
+            print("TOGLIMI self._load_prod_mat()")
+            #self._load_prod_mat()
         except:
             print("Building features products matrix")
             self._build_products_matrix()
             self._store_prod_mat()
             self._load_prod_mat()
     
+    def test_sorting(self):
+        self._sort_genres_by_pop()
+        self._sort_actor_by_pop()
+        self._sort_country_by_pop()
+        self._sort_director_by_pop()
+        print("SORTING: \ngenres:{}, \nactor:{}, \ncountry:{}, \ndirector:{}".format(self._genres_features_sorted,self._actor_features_sorted,self._country_features_sorted,self._director_features_sorted))
+
+
+    def _sort_genres_by_pop(self):
+        list_tuples = []
+        genres_indexes = self._genres_features
+        #print("Genres indexes",genres_indexes)
+        for genres_index in genres_indexes:
+            #print("Index: {} , len: {}".format(genres_index,len(self._icm_matrix[genres_index,:].nonzero()[1])))
+            list_tuples.append((genres_index,len(self._icm_matrix[genres_index,:].nonzero()[1])))
+
+        #print("original:",list_tuples)
+        list_tuples.sort(key=lambda tup: tup[1],reverse=True)
+        self._genres_features_sorted = list_tuples
     
-    
+    def _sort_actor_by_pop(self):
+        list_tuples = []
+        actor_indexes = self._actor_features
+        for actor_index in actor_indexes:
+            list_tuples.append((actor_index,len(self._icm_matrix[actor_index,:].nonzero()[1])))
+
+        list_tuples.sort(key=lambda tup: tup[1],reverse=True)
+        self._actor_features_sorted = list_tuples
+
+    def _sort_country_by_pop(self):
+        list_tuples = []
+        country_indexes = self._country_features
+        for country_index in country_indexes:
+            list_tuples.append((country_index,len(self._icm_matrix[country_index,:].nonzero()[1])))
+
+        list_tuples.sort(key=lambda tup: tup[1],reverse=True)
+        self._country_features_sorted = list_tuples
+
+    def _sort_director_by_pop(self):
+        list_tuples = []
+        director_indexes = self._director_features
+        for director_index in director_indexes:
+            list_tuples.append((director_index,len(self._icm_matrix[director_index,:].nonzero()[1])))
+
+        list_tuples.sort(key=lambda tup: tup[1],reverse=True)
+        self._director_features_sorted = list_tuples
+
     def _store_prod_mat(self):
         for i in range(NUM_PROD_MAT):
             m = self._prod_mat[i]
@@ -267,6 +313,8 @@ if __name__ == '__main__':
     
     import time
     import multiprocessing
+
+    a.test_sorting()
 
     tic = time.time()
     pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
