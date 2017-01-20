@@ -80,11 +80,62 @@ class NetflixReader:
     
     def test_sorting(self):
         self._sort_genres_by_pop()
+        print("Sorting by genres: completed!")
         self._sort_actor_by_pop()
+        print("Sorting by actor: completed!")
         self._sort_country_by_pop()
+        print("Sorting by country: completed!")
         self._sort_director_by_pop()
-        print("SORTING: \ngenres:{}, \nactor:{}, \ncountry:{}, \ndirector:{}".format(self._genres_features_sorted,self._actor_features_sorted,self._country_features_sorted,self._director_features_sorted))
+        print("Sorting by director: completed!")
+        #print("SORTING: \ngenres:{}, \nactor:{}, \ncountry:{}, \ndirector:{}".format(self._genres_features_sorted,self._actor_features_sorted,self._country_features_sorted,self._director_features_sorted))
 
+    def test_cut(self):
+        for k in range(1,10):
+            print("\n\n===CUTTING {}===".format(k))
+            print("\nGenres:")
+            self._cut_genres_by_pop(k)
+            print("\nActor:")
+            self._cut_actor_by_pop(k)
+            print("\nCountry:")
+            self._cut_country_by_pop(k)
+            print("\nDirector:")
+            self._cut_director_by_pop(k)
+
+    def _cut_genres_by_pop(self, k):
+        list_cutted_features = []
+        for couple in self._genres_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._genres_features_sorted)))
+                return list_cutted_features
+            list_cutted_features.append(ind)
+
+    def _cut_actor_by_pop(self, k):
+        list_cutted_features = []
+        for couple in self._actor_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._actor_features_sorted)))
+                return list_cutted_features
+            list_cutted_features.append(ind)
+
+    def _cut_country_by_pop(self, k):
+        list_cutted_features = []
+        for couple in self._country_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._country_features_sorted)))
+                return list_cutted_features
+            list_cutted_features.append(ind)
+
+    def _cut_director_by_pop(self, k):
+        list_cutted_features = []
+        for couple in self._director_features_sorted:
+            ind, freq = couple
+            if freq < k:
+                print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._director_features_sorted)))
+                return list_cutted_features
+            list_cutted_features.append(ind)
 
     def _sort_genres_by_pop(self):
         list_tuples = []
@@ -315,6 +366,7 @@ if __name__ == '__main__':
     import multiprocessing
 
     a.test_sorting()
+    a.test_cut()
 
     tic = time.time()
     pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
