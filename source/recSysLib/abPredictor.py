@@ -6,14 +6,14 @@ from lasagne.layers import InputLayer, GaussianNoiseLayer, DenseLayer
 from lasagne.regularization import l2, regularize_network_params
 import lasagne
 import scipy
-from sklearn.cross_validation import train_test_split
+from sklearn.model_selection import train_test_split
 from netflix_reader import  NetflixReader
-
+import joblib
 
 NUM_FEATURES = 9
 GAUSSIAN_NOISE_SIGMA = 0.
 LEARNING_RATE = 0.001
-L2_LAMBDA = 0.1
+L2_LAMBDA = 0.
 
 NUM_EPOCHS = 1000
 
@@ -25,7 +25,7 @@ AB_FILE_X_VAL = BASE_FILE + "X_val.npy"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
 AB_FILE_Y_VAL = BASE_FILE + "Y_val.npy"
 FILE = BASE_FILE + "ab_model.npz"
-SLIM_FILE = "../../datasources/slim_W01.npy"
+SLIM_FILE = "../../datasources/slimW_0.1_1000.npz"
 
 
 class abPredictor:
@@ -59,6 +59,7 @@ class abPredictor:
             self._X_val = np.load(AB_FILE_X_VAL)
             self._y_train = np.load(AB_FILE_Y_TRAIN)
             self._y_val = np.load(AB_FILE_Y_VAL)
+            self._print_data_dim()
         except:
             print("Data not found. Creating dataset")
             self._create_dataset()
@@ -66,6 +67,17 @@ class abPredictor:
             self._X_val = np.load(AB_FILE_X_VAL)
             self._y_train = np.load(AB_FILE_Y_TRAIN)
             self._y_val = np.load(AB_FILE_Y_VAL)
+            self._print_data_dim()
+
+
+
+   ###PRINT FIMENSION OF DATA VECTORS###
+    def _print_data_dim(self):
+        print("X Train: " + str(self._X_train.shape))
+        print("y Train: " + str(self._y_train.shape))
+        print("X Validation: " + str(self._X_val.shape))
+        print("y Validation: " + str(self._y_val.shape))
+
         
         
     
@@ -133,13 +145,18 @@ class abPredictor:
     
     
     ###EXPLORE HYPERPARAMETERS###
-    def explore_hyperparameters(self, X_train, y_train, X_val, y_val):
+    def explore_hyperparameters(self):
         network = self._net
+        X_train = self._X_train
+        y_train = self._y_train
+        X_val = self._X_val
+        y_val = self._y_val
+
         #save starting parameters
         params = lasagne.layers.get_all_param_values(network)
 
         #get initial values
-        t_loss, t_l2 = val_fn(X_val, y_val)     
+        t_loss, t_l2 = self._val_fn(X_val, y_val)     
         print("Initial  valid. loss:\t\t{:.6f}".format(t_loss))
 
 
@@ -149,7 +166,7 @@ class abPredictor:
             #self._l2.set_value(np.float32(random.uniform(0.00000001, 0.00000100)))
             self._sigma.set_value(np.float32(random.uniform(0.,0.05)))
             
-            network, train_loss, val_loss = _train_network(network, self._train_fn, self._val_fn,
+            network, train_loss, val_loss = self._train_network(network, self._train_fn, self._val_fn,
                                                            X_train, y_train, X_val, y_val,
                                                            NUM_EPOCHS, verbose = False, save_all=True)
             
@@ -179,30 +196,51 @@ class abPredictor:
     ###CREATE THE DATASET###
     def _create_dataset(self):
         #load the slim matrix and the netflix dataset
-        weight_matrix = np.load(SLIM_FILE)
+        weight_matrix = joblib.load(SLIM_FILE)
+        print("Loaded weight matrix (y)")
         rdr = NetflixReader()
+        print("Loaded products matrix (x)")
         
         #get all the couple of items with a non zero similarity
         idx = weight_matrix.nonzero()
-        
+        print("We have %d items to compute:" %(len(idx[0])))
+
         Xs = list()
         ys = list()
-        
+        counter = 0
+
         for (i1,i2) in zip(idx[0], idx[1]):
-            x = rdr.get_similarity(i1,i2)
+            #the weight matrix is not sym. We just insert two times the same Xs with different ys
+            #which is equal to optimize for the mean of the two
+            #TODO
+            #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
+            x = np.array(rdr._similarity(i1,i2), dtype=np.float32)
+            try:
+                assert(isinstance(x, np.ndarray))
+                assert(isinstance(x[0], np.float32))
+            except:
+                import sys
+                import traceback
+                _, _, tb = sys.exc_info()
+                traceback.print_tb(tb) # Fixed format
+                print(i1,i2)
+
             y = weight_matrix[i1,i2]
             
             Xs.append(x)
             ys.append([y])
+
+            counter +=1
+            if (counter % 10000 == 0):
+                print(counter)
         
         #take out some samples for validation
         X_train, X_val, y_train, y_val= train_test_split(Xs, ys, test_size=VAL_PERCENTAGE, random_state=1)
         
-        #save
-        np.save(AB_FILE_X_TRAIN, np.array(X_train, dtype=np.float32))
-        np.save(AB_FILE_X_VAL, np.array(X_val, dtype=np.float32))
-        np.save(AB_FILE_Y_TRAIN, np.array(y_train, dtype=np.float32))
-        np.save(AB_FILE_Y_VAL, np.array(y_val, dtype=np.float32))
+        np.save(AB_FILE_X_TRAIN, np.array(X_train))
+        np.save(AB_FILE_X_VAL, np.array(X_val))
+        np.save(AB_FILE_Y_TRAIN, np.array(y_train))
+        np.save(AB_FILE_Y_VAL, np.array(y_val))
         
         
         
@@ -233,4 +271,4 @@ class abPredictor:
     
 if __name__ == '__main__':
     a = abPredictor()
-    a._compute_sim_matrix()
+    a.explore_hyperparameters()
