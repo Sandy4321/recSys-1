@@ -22,6 +22,7 @@ l2 = 10
 
 #A) INIT
 # Dataset loading and partitioning
+print("INIT")
 netflix_urm = get_urm()
 urm_partition = DataPartition(netflix_urm)
 urm_partition.split_cross(train_perc_col=percentage_train_col, train_perc_row=percentage_train_row,verbose=0)
@@ -83,31 +84,36 @@ else:
     weight_matrix = load_sparse_mat('../../datasources/slimW_{}_{}.npz'.format(l1,l2))
     model.set_urm_matrix(test_URMmatrix)
     model.set_weight_matrix(weight_matrix)
-    print(weight_matrix)
-    print(type(weight_matrix))
+    #print(weight_matrix)
+    #print(type(weight_matrix))
 
 
 #C) EVALUATION
 
-print("\nTEST URM MATRIX.nonzero()",test_URMmatrix.nonzero())
-print("\nIndexes unique",np.unique(test_URMmatrix.nonzero()[0]))
+#print("\nTEST URM MATRIX.nonzero()",test_URMmatrix.nonzero())
+#print("\nIndexes unique",np.unique(test_URMmatrix.nonzero()[0]))
 
 n_eval = 0
 metric_ = 0.0
 metric_1 = 0.0
 iteration = 0
 
+# Compute residual and sampled matrices. (holdout for evaluation)
+model.decompose_urm_matrix(k, verbose = 0)
+# Set of learning matrix as the sampled_csc
+model.set_urm_matrix(model.get_sampled_csc())
 #print(weight_matrix)
 
 users_test = np.unique(test_URMmatrix.nonzero()[0])
 #print(test_URMmatrix)
 print("\nITERATION FOR EVALUATION")
+evaluation_URMmatrix = model.get_residual_csc()
 for user_to_test in users_test:
     iteration += 1
     #print("Iteration: {} over {}".format(iteration, len(users_test)))
-    relevant_items = test_URMmatrix[user_to_test].nonzero()[1]
+    relevant_items = evaluation_URMmatrix[user_to_test].nonzero()[1]
     #print(test_URMmatrix[user_to_test])
-    if len(relevant_items) > 0:
+    if len(relevant_items) > 2*k:
         n_eval += 1
         #print("SHAPES: train_URM {}, test_URM {}, weight {}, test_URM[u] {}".format(train_URMmatrix.shape, test_URMmatrix.shape, weight_matrix.shape, test_URMmatrix[user_to_test].shape))
         recommended_items = model.recommend(user_id = user_to_test, exclude_seen=False)

@@ -2,6 +2,7 @@ import numpy as np
 import scipy.sparse as sps
 from sklearn.linear_model import ElasticNet
 from .base import Recommender,check_matrix
+import random
 
 # extends the abstract class Recommender, it is contained in the file base.py
 class Slim(Recommender):
@@ -103,16 +104,53 @@ class Slim(Recommender):
             ranking = self._filter_seen(user_id, ranking)
         return ranking[:n]
 
-    def predict_rates(self, user_id, exclude_seen=True):
+    def predict_rates(self, user_id, exclude_seen=True, verbose = 0):
         user_profile = self._get_user_ratings(user_id)
         scores = user_profile.dot(self.W_sparse).toarray().ravel()
-        print(scores)
+        if verbose > 0:
+            print(scores)
 
     def set_weight_matrix(self, W):
         self.W_sparse = W
 
     def set_urm_matrix(self, X):
         self.dataset = X
+
+    def get_sampled_csc(self):
+        return self.sampled_csc
+
+    def get_residual_csc(self):
+        return self.residual_csc
+
+    def decompose_urm_matrix(self, k, verbose = 0):
+        self.original_dataset = self.dataset
+        list_users = np.unique(self.dataset.nonzero()[0])
+        csc_residual_dataset = sps.lil_matrix(self.dataset.shape)
+        csc_sampled_dataset = sps.lil_matrix(self.dataset.shape)
+        for u in list_users:
+            user_profile = self.dataset[u,:]
+            if verbose > 0:
+                print("\nUser {} profile:".format(u),user_profile)
+            rated_items = list(user_profile.nonzero()[1])
+            if len(rated_items) > k:
+                sampled_items = random.sample(rated_items,k)
+                residual_items = list(set(rated_items) - set(sampled_items))
+                if verbose > 0:
+                    print("All items",rated_items)
+                    print("Sampled items type: {}, {}".format(type(sampled_items),sampled_items))
+                    print("Residual items ",residual_items)
+                for i in residual_items:
+                    csc_residual_dataset[u,i] = user_profile[0,i]
+
+                for i in sampled_items:
+                    csc_sampled_dataset[u,i] = user_profile[0,i]
+                    #print(csc_sampled_dataset[u,i])
+                #print("Sampled type:{}, {}".format(type(sampled_items), sampled_items))
+        if verbose > 0:
+            print("CSC sampled:\n",csc_sampled_dataset)
+            print("CSC residual:\n",csc_residual_dataset)
+        self.sampled_csc = csc_sampled_dataset
+        self.residual_csc = csc_residual_dataset
 
 from multiprocessing import Pool
 from functools import partial
