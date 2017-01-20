@@ -12,9 +12,12 @@ import joblib
 import random
 import time
 
-USE_LINEAR_MODEL = False
+USE_LINEAR_MODEL = True
+USE_ENTIRE_FEATURES = True
 NUM_HIDDEN_UNITS = 30
 NUM_FEATURES = 9
+if USE_ENTIRE_FEATURES:
+    NUM_FEATURES = 12300
 GAUSSIAN_NOISE_SIGMA = 0.
 LEARNING_RATE = 0.
 L2_LAMBDA = 0.1
@@ -24,6 +27,8 @@ NUM_EPOCHS = 200
 VAL_PERCENTAGE = 0.1
 
 BASE_FILE = "../../datasources/ab/"
+if USE_ENTIRE_FEATURES:
+    BASE_FILE = "../../datasources/ab_2/"
 AB_FILE_X_TRAIN = BASE_FILE + "X_train.npy"
 AB_FILE_X_VAL = BASE_FILE + "X_val.npy"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
@@ -222,22 +227,18 @@ class abPredictor:
         Xs = list()
         ys = list()
         counter = 0
+        
+        if USE_ENTIRE_FEATURES:
+            s = rdr._similarity_features
+        else:
+            s = rdr._similarity
 
         for (i1,i2) in zip(idx[0], idx[1]):
             #the weight matrix is not sym. We just insert two times the same Xs with different ys
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = np.array(rdr._similarity(i1,i2), dtype=np.float32)
-            try:
-                assert(isinstance(x, np.ndarray))
-                assert(isinstance(x[0], np.float32))
-            except:
-                import sys
-                import traceback
-                _, _, tb = sys.exc_info()
-                traceback.print_tb(tb) # Fixed format
-                print(i1,i2)
+            x = np.array(s(i1,i2), dtype=np.float32)
 
             y = weight_matrix[i1,i2]
             
