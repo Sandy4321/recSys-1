@@ -20,12 +20,13 @@ NUM_HIDDEN_UNITS = 30
 NUM_FEATURES = 9
 if USE_ENTIRE_FEATURES:
     NUM_FEATURES = 4701
+
 GAUSSIAN_NOISE_SIGMA = 0.
-LEARNING_RATE = 0.
+LEARNING_RATE = 0.005
 L2_LAMBDA = 0.1
 
-NUM_EPOCHS = 200
-BATCH_SIZE = 1
+NUM_EPOCHS = 20
+BATCH_SIZE = 1000
 VAL_PERCENTAGE = 0.1
 
 BASE_FILE = "../../datasources/ab/"
@@ -103,7 +104,7 @@ class abPredictor:
         net = {}
         net['input'] = InputLayer(shape=(BATCH_SIZE, num_features), input_var=input_var)
         net['noise'] = GaussianNoiseLayer(net['input'], sigma=sigma)
-        net['out'] = DenseLayer(net['noise'], num_units=1, nonlinearity=lasagne.nonlinearities.rectify)
+        net['out'] = DenseLayer(net['noise'], num_units=1, nonlinearity=lasagne.nonlinearities.linear, W=lasagne.init.Constant(0.0))
         return net['out']
     
     def _define_ab_network_mlp(self, input_var, num_features, sigma, num_hidden):
@@ -125,10 +126,10 @@ class abPredictor:
         
         loss = lasagne.objectives.squared_error(out, target_var)
         l2_loss = l2_lambda * regularize_network_params(network, l2)
-        loss = loss.sum() + l2_loss
+        loss = loss.mean() + l2_loss
         
         test_loss = lasagne.objectives.squared_error(test_out, target_var)
-        test_loss = test_loss.sum() + l2_loss
+        test_loss = test_loss.mean() + l2_loss
         
         updates = lasagne.updates.adam(loss, params, lr)
         
@@ -156,13 +157,11 @@ class abPredictor:
             train_err /= train_batches
             train_err_l2 /= train_batches
             
-            train_err, train_err_l2 = train_fn(X_train, y_train)
-
-            # And a full pass over the validation data:
+           # And a full pass over the validation data:
             val_err = val_err_l2 = val_batches = 0
             for batch in self._iterate_minibatches(X_val, y_val, BATCH_SIZE, shuffle = False):
                 inputs, targets = batch
-                e,e2 = val_fn(X_train, y_train)
+                e,e2 = val_fn(inputs.toarray().astype(np.float32), targets)
                 val_err += e
                 val_err_l2 += e2
                 val_batches += 1
@@ -212,11 +211,19 @@ class abPredictor:
         params = lasagne.layers.get_all_param_values(network)
 
         #get initial values
-        t_loss, t_l2 = self._val_fn(X_val, y_val)     
-        print("Initial  valid. loss:\t\t%.8f" %(t_loss))
+        val_err = val_err_l2 = val_batches = 0
+        for batch in self._iterate_minibatches(X_val, y_val, BATCH_SIZE, shuffle = False):
+            inputs, targets = batch
+            e,e2 = self._val_fn(inputs.toarray().astype(np.float32), targets)
+            val_err += e
+            val_err_l2 += e2
+            val_batches += 1
+        val_err_l2 /= val_batches
+        val_err /= val_batches
+        print("Initial  valid. loss:\t\t%.8f" %(val_err))
 
 
-        print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain l2\tVal l2")
+        print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain - l2\tVal - l2")
         for i in range(0,11):
             #self._lr.set_value(10**i)#np.float32(random.uniform(0.001, 0.0001)))
             #self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
@@ -226,7 +233,7 @@ class abPredictor:
                                                            X_train, y_train, X_val, y_val,
                                                            NUM_EPOCHS, verbose = False, save_all=True)
             
-            print("%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" % (self._lr.get_value(), self._l2.get_value(), self._sigma.get_value(), train_loss, val_loss, t_l2, v_l2))
+            print("%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f\t%.8f" % (self._lr.get_value(), self._l2.get_value(), self._sigma.get_value(), train_loss, val_loss, train_loss-t_l2, val_loss-v_l2))
         
             #save the models	
             FILE_TMP = FILE + "_partial/" + str(i) + ".npz"
@@ -299,31 +306,34 @@ class abPredictor:
         
     ###COMPUTE THE SIMILARITY MATRIX USING THE NETWORK###
     #TODO
-    def _compute_sim_matrix(self, n_items=None):
+    def _compute_sim_matrix(self, list_of_items):
         rdr = NetflixReader()
-        if n_items == None:
-            n_items = rdr.numItems
+        n_items = rdr.numItems
         matrix = np.zeros((n_items,n_items), dtype=np.float32)
         
         print("Computing products")
         products = list()
         indices = list()
-        for movieId1 in range(0, n_items):
-            for movieId2 in range(movieId1+1, n_items):
-                products.append(np.array(rdr._similarity(movieId1, movieId2), dtype=np.float32))
+        for movieId1 in list_of_items:
+            for movieId2 in list_of_items:
+                if movieId2 <= movieId1:
+                    continue
+                products.append(rdr._similarity_features(movieId1, movieId2).toarray().flatten().astype(np.float32))
                 indices.append((movieId1, movieId2))
-        print(len(products))
         
         similarities = self._predict_fn(np.array(products))
-        print(len(similarities))
         
         for (idx, sim) in zip(indices, similarities):
             matrix[idx[0], idx[1]] = sim
             matrix[idx[1], idx[0]] = sim
         
-        return matrix       
+        return scipy.sparse.csc_matrix(matrix)
         
     
 if __name__ == '__main__':
     a = abPredictor()
-    a.fit_network()
+    #a.fit_network()
+
+    b = a._compute_sim_matrix(range(0,10))
+    print(b)
+    print(np.sum(np.abs(b)))
