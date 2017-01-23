@@ -11,6 +11,7 @@ import scipy
 
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
+ICM_RED_MATRIX_FILE = "../../datasources/netflix/icm_red_mat.pkl"
 ICM_RED_DICTIONARY_FILE = "../../datasources/netflix/icm_red_dict.pkl"
 PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
 NUM_PROD_MAT = 21
@@ -76,7 +77,7 @@ class NetflixReader:
                 pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
                 
         try:
-            with open(ICM_RED_DICTIONARY_FILE, 'rb') as f:
+            with open(ICM_RED_MATRIX_FILE, 'rb') as f:
                 self._icm_reduced_dict = pickle.load(f)
         except:
             print("Building reduced icm dictionary - matrix")
@@ -85,10 +86,10 @@ class NetflixReader:
             self._sort_actor_by_pop()
             self._sort_country_by_pop()
             self._sort_director_by_pop()
-            print("Features have been sorted")
+            print("\nFeatures have been sorted")
 
             # Features cutting
-            number_reduced_features = 1 # refers to the year
+            number_reduced_features = 2 # refers to the year and miniseries
             cutting_thresholds = {'tag':15,'genres':2,'actor':10,'country':2,'director':5}
             number_reduced_features += self._cut_tag_by_pop(cutting_thresholds['tag'], verbose=1)
             number_reduced_features += self._cut_genres_by_pop(cutting_thresholds['genres'], verbose=1)
@@ -96,13 +97,12 @@ class NetflixReader:
             number_reduced_features += self._cut_country_by_pop(cutting_thresholds['country'], verbose=1)
             number_reduced_features += self._cut_director_by_pop(cutting_thresholds['director'], verbose=1)
             self._reduced_features_space = number_reduced_features
-            print("Features have been cut, there are: {} reduced features".format(number_reduced_features))
+            print("\nFeatures have been cut, there are: {} reduced features".format(number_reduced_features))
 
-            self._build_reduced_feature_dict()
-            with open(ICM_RED_DICTIONARY_FILE, 'wb') as f:
-                pickle.dump(self._icm_reduced_dict, f, pickle.HIGHEST_PROTOCOL)
-        
-        self._build_reduced_feature_matrix()
+            self._build_reduced_feature_matrix()
+#            self._build_reduced_feature_dict()
+            with open(ICM_RED_MATRIX_FILE, 'wb') as f:
+                pickle.dump(self._icm_reduced_matrix, f, pickle.HIGHEST_PROTOCOL)
         self._urm['TOGLIMI CHE TANTO SONO UN BLOCCO']
 
         #try to load the matrix of products
@@ -303,28 +303,36 @@ class NetflixReader:
         for itemId in range(0, 3): #self._icm_matrix.shape[1]):
             new_col_index = 0
             # Reduced features space. new_col_index = normalized index for feature columns
+            print("Actors: ",len(self._reduced_actor_indexes))
             for actor in self._reduced_actor_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[actor, itemId].astype(bool)
                 new_col_index += 1
+            print("Index: {} , Country {}".format(new_col_index,len(self._reduced_country_indexes)))
             for country in self._reduced_country_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[country, itemId].astype(bool)
                 new_col_index += 1
+            print("Index: {} , Director {}".format(new_col_index,len(self._reduced_director_indexes)))
             for director in self._reduced_director_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[director, itemId].astype(bool)
                 new_col_index += 1
+            print("Index: {}, Genre {}".format(new_col_index, len(self._reduced_genres_indexes)))
             for genre in self._reduced_genres_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[genre, itemId].astype(bool)
                 new_col_index += 1
+            print("Index: {}, Miniserie {}".format(new_col_index, len(self._miniseries_features)))
             for miniserie in self._miniseries_features:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[miniserie, itemId].astype(bool)
                 new_col_index += 1
+            print("Index: {}, Year {}".format(new_col_index, 1))
             # Not reduced (year), the title is not considered in this space
             year_feat = self._icm_matrix[self._years_features,itemId].astype(bool).indices[0]
             self._icm_reduced_matrix[itemId, new_col_index] = int(self._icm_stems[self._years_features[year_feat]][0][0])
             new_col_index += 1
+            print("Index: ", new_col_index , " Tag ", len(self._reduced_tag_indexes))
             for tag in self._reduced_tag_indexes:
-                self._icm_reduced_marix[itemId, tag] = self.icm_matrix[tag, itemId].astype(bool)
-            print("New index: ",new_col_index)
+                self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[tag, itemId].astype(bool)
+                new_col_index  += 1
+            print("FINAL: ", new_col_index)
 
     def _build_reduced_feature_dict(self):
         self._icm_reduced_dict = {}
