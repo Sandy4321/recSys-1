@@ -128,11 +128,12 @@ class Slim(Recommender):
         list_users = np.unique(self.dataset.nonzero()[0])
         csc_residual_dataset = sps.lil_matrix(self.dataset.shape)
         csc_sampled_dataset = sps.lil_matrix(self.dataset.shape)
+        len_test = len(list_users)
         for u in list_users:
             iteration += 1
             user_profile = self.dataset[u,:]
             if verbose > 0 and iteration%500 == 0:
-                print("\nUser {}".format(u))
+                print("\nIteration {} over {}".format(iteration, len_test))
                 #print("Profile:",user_profile)
             rated_items = list(user_profile.nonzero()[1])
             if len(rated_items) > k:

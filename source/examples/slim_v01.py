@@ -18,7 +18,7 @@ percentage_sub_train_row = 0.7
 k = 5 # Number of k-items to make the evaluation on
 
 l1 = 0.1
-l2 = 10
+l2 = 100000
 
 #A) INIT
 # Dataset loading and partitioning
@@ -30,29 +30,14 @@ urm_partition.split_cross(train_perc_col=percentage_train_col, train_perc_row=pe
 train_URMmatrix = urm_partition.get_upLeft_matrix()
 test_URMmatrix = urm_partition.get_lowLeft_matrix()
 
-# Further reduction for l1 and l2 estimation
-#train_partition = DataPartition(train_URMmatrix)
-#train_partition.split_train_test(train_perc_row=percentage_sub_train_row,train_perc_col=percentage_sub_train_col, verbose=0)
-#add_train_urm = train_partition.get_train_matrix()
-
 #B) WEIGHT MATRIX COMPUTATION 
 print("Original: {} , train : {} , test: {} ".format(netflix_urm.shape,train_URMmatrix.shape, test_URMmatrix.shape))
-
-    # Split in train and validation by holdout
-    # sub_train , sub_validation = holdout(train_URMmatrix, perc=0.70, clean_test=True)
-
-    #print("SHAPES Sub Train: {}, sub Validation: {}".format(sub_train.shape, sub_validation.shape))
-    #print("LENGTHS Sub Train: {}, sub Validation: {}".format(len(sub_train.nonzero()[0]), len(sub_validation.nonzero()[0])))
-    #indexes = sub_validation.nonzero()
-
-    #users_validation = np.unique(indexes[0]
-    #l2 = numbernp.float32(random.uniform(0, 10.0))
-
-    # Compute the model with the established parameters
 model = slim.MultiThreadSLIM(l1_penalty=l1,l2_penalty=l2)
-#model.fit(train_URMmatr
+
+# TO CHECK
 #print("HOLDOUT")
 #trainURM, validationURM = holdout(train_URMmatrix, perc = 0.70, clean_test = True)
+#users_validation = validationURM.nonzero()[0]
 
 if TO_COMPUTE_MATRIX:
     print("INIT SIM MATRIX COMPUTATION")
@@ -85,7 +70,8 @@ else:
     model.set_urm_matrix(test_URMmatrix)
     model.set_weight_matrix(weight_matrix)
     #print(weight_matrix)
-    #print(type(weight_matrix))
+    print("Weight Matrix type: ",type(weight_matrix))
+    print("Weight Matrix shape: ",weight_matrix.shape)
 
 
 #C) EVALUATION
@@ -112,7 +98,8 @@ print("\nITERATION FOR EVALUATION")
 evaluation_URMmatrix = model.get_residual_csc()
 for user_to_test in users_test:
     iteration += 1
-    #print("Iteration: {} over {}".format(iteration, len(users_test)))
+    if iteration%100 == 0:
+        print("Iteration: {} over {}".format(iteration, len(users_test)))
     relevant_items = evaluation_URMmatrix[user_to_test].nonzero()[1]
     #print(test_URMmatrix[user_to_test])
     if len(relevant_items) > 2*k:
