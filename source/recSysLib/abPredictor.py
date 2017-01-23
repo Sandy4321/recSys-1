@@ -11,6 +11,8 @@ from netflix_reader import  NetflixReader
 import joblib
 import random
 import time
+from theano import sparse
+import pickle
 
 USE_LINEAR_MODEL = True
 USE_ENTIRE_FEATURES = True
@@ -29,19 +31,19 @@ VAL_PERCENTAGE = 0.1
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train.npy"
-AB_FILE_X_VAL = BASE_FILE + "X_val.npy"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train.pkl"
+AB_FILE_X_VAL = BASE_FILE + "X_val.pkl"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
 AB_FILE_Y_VAL = BASE_FILE + "Y_val.npy"
 FILE = BASE_FILE + "ab_model.npz"
-SLIM_FILE = "../../datasources/slimW_0.1_10000.npz"
+SLIM_FILE = "../../datasources/slimW_0.1_10.npz"
 
 
 class abPredictor:
     def __init__(self):
         #define network
-        self._input_var = T.tensor3('inputs')
-        self._target_var = T.matrix('targets')
+        self._input_var = T.matrix('inputs')
+        self._target_var = T.vector('targets')
         self._sigma = theano.shared(np.float32(GAUSSIAN_NOISE_SIGMA))
         print("Creating network")
         if USE_LINEAR_MODEL:
@@ -67,26 +69,24 @@ class abPredictor:
         #load the dataset
         print("Loading data")
         try:
-            self._X_train = self._toarray(np.load(AB_FILE_X_TRAIN))
-            self._X_val = self._toarray(np.load(AB_FILE_X_VAL))
-            self._y_train = np.load(AB_FILE_Y_TRAIN)
-            self._y_val = np.load(AB_FILE_Y_VAL)
+            with open(AB_FILE_X_TRAIN, 'rb') as infile:
+                self._X_train = pickle.load(infile).astype(np.float32)
+            with open(AB_FILE_X_VAL, 'rb') as infile:
+                self._X_val = pickle.load(infile).astype(np.float32)
+            self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
+            self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
         except:
             print("Data not found. Creating dataset")
             self._create_dataset()
-            self._X_train = self._toarray(np.load(AB_FILE_X_TRAIN))
-            self._X_val = self._toarray(np.load(AB_FILE_X_VAL))
-            self._y_train = np.load(AB_FILE_Y_TRAIN)
-            self._y_val = np.load(AB_FILE_Y_VAL)
+            with open(AB_FILE_X_TRAIN, 'rb') as infile:
+                self._X_train = pickle.load(infile).astype(np.float32)
+            with open(AB_FILE_X_VAL, 'rb') as infile:
+                self._X_val = pickle.load(infile).astype(np.float32)
+            self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
+            self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
 
-
-    def _toarray(self, thing):
-        new = list()
-        for i in range(len(thing)):
-            new.append(thing[i].toarray().astype(np.float32))
-        return np.array(new)
 
    ###PRINT FIMENSION OF DATA VECTORS###
     def _print_data_dim(self):
@@ -101,7 +101,7 @@ class abPredictor:
     ###NETWORK DEFINITION###
     def _define_ab_network_linear(self, input_var, num_features, sigma):
         net = {}
-        net['input'] = InputLayer(shape=(BATCH_SIZE, num_features, 1), input_var=input_var)
+        net['input'] = InputLayer(shape=(BATCH_SIZE, num_features), input_var=input_var)
         net['noise'] = GaussianNoiseLayer(net['input'], sigma=sigma)
         net['out'] = DenseLayer(net['noise'], num_units=1, nonlinearity=lasagne.nonlinearities.rectify)
         return net['out']
@@ -149,7 +149,7 @@ class abPredictor:
             train_err = train_err_l2 = train_batches = 0
             for batch in self._iterate_minibatches(X_train, y_train, BATCH_SIZE, shuffle= True):
                 inputs, targets = batch
-                e,e2 = train_fn(inputs, targets)
+                e,e2 = train_fn(inputs.toarray().astype(np.float32), targets)
                 train_err += e
                 train_err_l2 += e2
                 train_batches += 1
@@ -188,10 +188,10 @@ class abPredictor:
     
     def _iterate_minibatches(self, i, t, batchsize, shuffle=False):        
         if shuffle:
-            indices = np.arange(len(i))
+            indices = np.arange(i.shape[0])
             np.random.shuffle(indices)
             
-        for start_idx in range(0, len(i) - batchsize + 1, batchsize):
+        for start_idx in range(0, i.shape[0] - batchsize + 1, batchsize):
             if shuffle:
                 excerpt = indices[start_idx:start_idx + batchsize]
             else:
@@ -275,8 +275,7 @@ class abPredictor:
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = s(i1,i2)
-
+            x = s(i1,i2).toarray().flatten()
             y = weight_matrix[i1,i2]
             
             Xs.append(x)
@@ -285,12 +284,14 @@ class abPredictor:
             counter +=1
             if (counter % 10000 == 0):
                 print(counter)
-        
+ 
         #take out some samples for validation
         X_train, X_val, y_train, y_val= train_test_split(Xs, ys, test_size=VAL_PERCENTAGE, random_state=1)
         
-        np.save(AB_FILE_X_TRAIN, np.array(X_train))
-        np.save(AB_FILE_X_VAL, np.array(X_val))
+        with open(AB_FILE_X_TRAIN, 'wb') as outfile:
+            pickle.dump(scipy.sparse.csc_matrix(X_train, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
+        with open(AB_FILE_X_VAL, 'wb') as outfile:
+            pickle.dump(scipy.sparse.csc_matrix(X_val, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
         np.save(AB_FILE_Y_TRAIN, np.array(y_train))
         np.save(AB_FILE_Y_VAL, np.array(y_val))
         
