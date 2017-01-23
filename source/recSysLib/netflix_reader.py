@@ -87,12 +87,12 @@ class NetflixReader:
             print("Features sorted")
 
             # Features cutting
-            cutting_thresholds = {'tag':6,'genres':2,'actor':5,'country':2,'director':2}
-            self._cut_tag_by_pop(cutting_thresholds['tag'])
-            self._cut_genres_by_pop(cutting_thresholds['genres'])
-            self._cut_actor_by_pop(cutting_thresholds['actor'])
-            self._cut_country_by_pop(cutting_thresholds['country'])
-            self._cut_director_by_pop(cutting_thresholds['director'])
+            cutting_thresholds = {'tag':15,'genres':2,'actor':10,'country':2,'director':5}
+            self._cut_tag_by_pop(cutting_thresholds['tag'], verbose=1)
+            self._cut_genres_by_pop(cutting_thresholds['genres'], verbose=1)
+            self._cut_actor_by_pop(cutting_thresholds['actor'], verbose=1)
+            self._cut_country_by_pop(cutting_thresholds['country'], verbose=1)
+            self._cut_director_by_pop(cutting_thresholds['director'], verbose=1)
             print("Features cut")
             
             self._build_reduced_feature_dict()
