@@ -23,7 +23,7 @@ LEARNING_RATE = 0.
 L2_LAMBDA = 0.1
 
 NUM_EPOCHS = 200
-
+BATCH_SIZE = 1
 VAL_PERCENTAGE = 0.1
 
 BASE_FILE = "../../datasources/ab/"
@@ -82,7 +82,6 @@ class abPredictor:
             self._print_data_dim()
 
 
-
     def _toarray(self, thing):
         new = list()
         for i in range(len(thing)):
@@ -102,7 +101,7 @@ class abPredictor:
     ###NETWORK DEFINITION###
     def _define_ab_network_linear(self, input_var, num_features, sigma):
         net = {}
-        net['input'] = InputLayer(shape=(None, num_features, 1), input_var=input_var)
+        net['input'] = InputLayer(shape=(BATCH_SIZE, num_features, 1), input_var=input_var)
         net['noise'] = GaussianNoiseLayer(net['input'], sigma=sigma)
         net['out'] = DenseLayer(net['noise'], num_units=1, nonlinearity=lasagne.nonlinearities.rectify)
         return net['out']
@@ -147,10 +146,28 @@ class abPredictor:
         for epoch in range(num_epochs):        
             # In each epoch, we do a full pass over the training data:
             start_time = time.time()
+            train_err = train_err_l2 = train_batches = 0
+            for batch in self._iterate_minibatches(X_train, y_train, BATCH_SIZE, shuffle= True):
+                inputs, targets = batch
+                e,e2 = train_fn(inputs, targets)
+                train_err += e
+                train_err_l2 += e2
+                train_batches += 1
+            train_err /= train_batches
+            train_err_l2 /= train_batches
+            
             train_err, train_err_l2 = train_fn(X_train, y_train)
 
             # And a full pass over the validation data:
-            val_err, val_err_l2 = val_fn(X_train, y_train)
+            val_err = val_err_l2 = val_batches = 0
+            for batch in self._iterate_minibatches(X_val, y_val, BATCH_SIZE, shuffle = False):
+                inputs, targets = batch
+                e,e2 = val_fn(X_train, y_train)
+                val_err += e
+                val_err_l2 += e2
+                val_batches += 1
+            val_err_l2 /= val_batches
+            val_err /= val_batches
 
             # Then we print the results for this epoch:
             if verbose:
@@ -169,6 +186,20 @@ class abPredictor:
     
     
     
+    def _iterate_minibatches(self, i, t, batchsize, shuffle=False):        
+        if shuffle:
+            indices = np.arange(len(i))
+            np.random.shuffle(indices)
+            
+        for start_idx in range(0, len(i) - batchsize + 1, batchsize):
+            if shuffle:
+                excerpt = indices[start_idx:start_idx + batchsize]
+            else:
+                excerpt = slice(start_idx, start_idx + batchsize)
+            yield i[excerpt], t[excerpt]
+            
+            
+        
     ###EXPLORE HYPERPARAMETERS###
     def explore_hyperparameters(self):
         network = self._net
