@@ -1,5 +1,6 @@
 #Author: Stefano Cereda
 import scipy.io as sio
+import scipy.sparse as sps
 import numpy as np
 from difflib import SequenceMatcher
 import pickle
@@ -78,27 +79,32 @@ class NetflixReader:
             with open(ICM_RED_DICTIONARY_FILE, 'rb') as f:
                 self._icm_reduced_dict = pickle.load(f)
         except:
-            print("Building reduced icm dictionary")
+            print("Building reduced icm dictionary - matrix")
             self._sort_tag_by_pop()
             self._sort_genres_by_pop()
             self._sort_actor_by_pop()
             self._sort_country_by_pop()
             self._sort_director_by_pop()
-            print("Features sorted")
+            print("Features have been sorted")
 
             # Features cutting
+            number_reduced_features = 1 # refers to the year
             cutting_thresholds = {'tag':15,'genres':2,'actor':10,'country':2,'director':5}
-            self._cut_tag_by_pop(cutting_thresholds['tag'], verbose=1)
-            self._cut_genres_by_pop(cutting_thresholds['genres'], verbose=1)
-            self._cut_actor_by_pop(cutting_thresholds['actor'], verbose=1)
-            self._cut_country_by_pop(cutting_thresholds['country'], verbose=1)
-            self._cut_director_by_pop(cutting_thresholds['director'], verbose=1)
-            print("Features cut")
-            
+            number_reduced_features += self._cut_tag_by_pop(cutting_thresholds['tag'], verbose=1)
+            number_reduced_features += self._cut_genres_by_pop(cutting_thresholds['genres'], verbose=1)
+            number_reduced_features += self._cut_actor_by_pop(cutting_thresholds['actor'], verbose=1)
+            number_reduced_features += self._cut_country_by_pop(cutting_thresholds['country'], verbose=1)
+            number_reduced_features += self._cut_director_by_pop(cutting_thresholds['director'], verbose=1)
+            self._reduced_features_space = number_reduced_features
+            print("Features have been cut, there are: {} reduced features".format(number_reduced_features))
+
             self._build_reduced_feature_dict()
             with open(ICM_RED_DICTIONARY_FILE, 'wb') as f:
                 pickle.dump(self._icm_reduced_dict, f, pickle.HIGHEST_PROTOCOL)
         
+        self._build_reduced_feature_matrix()
+        self._urm['TOGLIMI CHE TANTO SONO UN BLOCCO']
+
         #try to load the matrix of products
         try:
             print("TOGLIMI self._load_prod_mat()")
@@ -148,61 +154,77 @@ class NetflixReader:
 
     def _cut_tag_by_pop(self, k, verbose = 0):
         list_cutted_features = []
+        num_features = 0
         for couple in self._tag_features_sorted:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
+                    print("Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._tag_features_sorted)))
                 self._reduced_tag_indexes = list_cutted_features
-                return
+                return num_features
+            num_features += 1
             list_cutted_features.append(ind)
 
     def _cut_genres_by_pop(self, k, verbose = 0):
         list_cutted_features = []
+        num_features = 0
         for couple in self._genres_features_sorted:
             ind, freq = couple
             if freq < k:
                 if verbose>0:
+                    print("Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._genres_features_sorted)))
                 self._reduced_genres_indexes = list_cutted_features
-                return
+                return num_features
+            num_features += 1
             list_cutted_features.append(ind)
 
     def _cut_actor_by_pop(self, k, verbose = 0):
         list_cutted_features = []
+        num_features = 0
         for couple in self._actor_features_sorted:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
+                    print("Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._actor_features_sorted)))
                 self._reduced_actor_indexes = list_cutted_features
-                return
+                return num_features
+            num_features += 1
             list_cutted_features.append(ind)
 
     def _cut_country_by_pop(self, k, verbose = 0):
         list_cutted_features = []
+        num_features = 0
         for couple in self._country_features_sorted:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
+                    print("Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._country_features_sorted)))
                 self._reduced_country_indexes = list_cutted_features
-                return
+                return num_features
             list_cutted_features.append(ind)
+            num_features += 1
 
     def _cut_director_by_pop(self, k, verbose = 0):
         list_cutted_features = []
+        num_features = 0
         for couple in self._director_features_sorted:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
+                    print("Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._director_features_sorted)))
                 self._reduced_director_indexes = list_cutted_features
-                return
+                return num_features
             list_cutted_features.append(ind)
+            num_features += 1
 
     def _sort_tag_by_pop(self):
         list_tuples = []
+        num_features = 0
         tag_indexes = self._tag_features
         for tag_index in tag_indexes:
             list_tuples.append((tag_index,len(self._icm_matrix[tag_index,:].nonzero()[1])))
@@ -274,6 +296,34 @@ class NetflixReader:
             self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
             self._icm_dict[itemId].append(self._titles[itemId])
             
+    def _build_reduced_feature_matrix(self):
+        self._icm_reduced_matrix = sps.lil_matrix((self._icm_matrix.shape[1], self._reduced_features_space))
+        print("Reduced csc matrix shape {}".format(self._icm_reduced_matrix.shape))
+
+        for itemId in range(0, 3): #self._icm_matrix.shape[1]):
+            new_col_index = 0
+            # Reduced features space. new_col_index = normalized index for feature columns
+            for actor in self._reduced_actor_indexes:
+                self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[actor, itemId].astype(bool)
+                new_col_index += 1
+            for country in self._reduced_country_indexes:
+                self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[country, itemId].astype(bool)
+                new_col_index += 1
+            for director in self._reduced_director_indexes:
+                self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[director, itemId].astype(bool)
+                new_col_index += 1
+            for genre in self._reduced_genres_indexes:
+                self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[genre, itemId].astype(bool)
+                new_col_index += 1
+            for miniserie in self._miniseries_features:
+                self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[miniserie, itemId].astype(bool)
+                new_col_index += 1
+            # Not reduced (year), the title is not considered in this space
+            year_feat = self._icm_matrix[self._years_features,itemId].astype(bool).indices[0]
+            self._icm_reduced_matrix[itemId, new_col_index] = int(self._icm_stems[self._years_features[year_feat]][0][0])
+            new_col_index += 1
+            print("New index: ",new_col_index)
+
     def _build_reduced_feature_dict(self):
         self._icm_reduced_dict = {}
         for itemId in range(0, self._icm_matrix.shape[1]):
