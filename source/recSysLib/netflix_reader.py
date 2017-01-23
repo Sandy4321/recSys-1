@@ -159,7 +159,7 @@ class NetflixReader:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
-                    print("Cutted ",num_features)
+                    print("\n TAG Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._tag_features_sorted)))
                 self._reduced_tag_indexes = list_cutted_features
                 return num_features
@@ -173,7 +173,7 @@ class NetflixReader:
             ind, freq = couple
             if freq < k:
                 if verbose>0:
-                    print("Cutted ",num_features)
+                    print("\nGENRES Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._genres_features_sorted)))
                 self._reduced_genres_indexes = list_cutted_features
                 return num_features
@@ -187,7 +187,7 @@ class NetflixReader:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
-                    print("Cutted ",num_features)
+                    print("\nCOUNTRY Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._actor_features_sorted)))
                 self._reduced_actor_indexes = list_cutted_features
                 return num_features
@@ -201,7 +201,7 @@ class NetflixReader:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
-                    print("Cutted ",num_features)
+                    print("\nCOUNTRY Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._country_features_sorted)))
                 self._reduced_country_indexes = list_cutted_features
                 return num_features
@@ -215,7 +215,7 @@ class NetflixReader:
             ind, freq = couple
             if freq < k:
                 if verbose > 0:
-                    print("Cutted ",num_features)
+                    print("\nDIRECTOR Cutted ",num_features)
                     print("Only {} over {} elements have been selected".format(len(list_cutted_features),len(self._director_features_sorted)))
                 self._reduced_director_indexes = list_cutted_features
                 return num_features
@@ -322,6 +322,8 @@ class NetflixReader:
             year_feat = self._icm_matrix[self._years_features,itemId].astype(bool).indices[0]
             self._icm_reduced_matrix[itemId, new_col_index] = int(self._icm_stems[self._years_features[year_feat]][0][0])
             new_col_index += 1
+            for tag in self._reduced_tag_indexes:
+                self._icm_reduced_marix[itemId, tag] = self.icm_matrix[tag, itemId].astype(bool)
             print("New index: ",new_col_index)
 
     def _build_reduced_feature_dict(self):
