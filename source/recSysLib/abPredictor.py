@@ -17,7 +17,7 @@ USE_ENTIRE_FEATURES = True
 NUM_HIDDEN_UNITS = 30
 NUM_FEATURES = 9
 if USE_ENTIRE_FEATURES:
-    NUM_FEATURES = 12300
+    NUM_FEATURES = 4701
 GAUSSIAN_NOISE_SIGMA = 0.
 LEARNING_RATE = 0.
 L2_LAMBDA = 0.1
@@ -34,7 +34,7 @@ AB_FILE_X_VAL = BASE_FILE + "X_val.npy"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
 AB_FILE_Y_VAL = BASE_FILE + "Y_val.npy"
 FILE = BASE_FILE + "ab_model.npz"
-SLIM_FILE = "../../datasources/slimW_0.1_1000.npz"
+SLIM_FILE = "../../datasources/slimW_0.1_10000.npz"
 
 
 class abPredictor:
@@ -75,8 +75,8 @@ class abPredictor:
         except:
             print("Data not found. Creating dataset")
             self._create_dataset()
-            self._X_train = np.load(AB_FILE_X_TRAIN)
-            self._X_val = np.load(AB_FILE_X_VAL)
+            self._X_train = self._toarray(np.load(AB_FILE_X_TRAIN))
+            self._X_val = self._toarray(np.load(AB_FILE_X_VAL))
             self._y_train = np.load(AB_FILE_Y_TRAIN)
             self._y_val = np.load(AB_FILE_Y_VAL)
             self._print_data_dim()
@@ -258,7 +258,7 @@ class abPredictor:
         print("Loaded products matrix (x)")
         
         #get all the couple of items with a non zero similarity
-        idx = weight_matrix[:500,:500].nonzero()
+        idx = weight_matrix.nonzero()
         print("We have %d couples of items to compute:" %(len(idx[0])))
 
         Xs = list()
