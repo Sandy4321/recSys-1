@@ -22,13 +22,13 @@ if USE_ENTIRE_FEATURES:
     NUM_FEATURES = 4701
 
 GAUSSIAN_NOISE_SIGMA = 0.
-LEARNING_RATE = 0.005
+LEARNING_RATE = 0.001
 L2_LAMBDA = 0.1
 
 NUM_EPOCHS = 20
 BATCH_SIZE = 1000
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.1 #percentage of null similarities to add
+RND_NULL_SIM = 0.02 #percentage of null similarities to add
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
@@ -296,6 +296,7 @@ class abPredictor:
         
         #Now randomly add some couples with null similarity
         for i1 in range(num_items):
+            print(i1)
             for i2 in range(i1+1, num_items):
                 if weight_matrix[i1,i2] != 0:
                     continue
