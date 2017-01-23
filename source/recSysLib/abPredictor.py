@@ -28,6 +28,7 @@ L2_LAMBDA = 0.1
 NUM_EPOCHS = 20
 BATCH_SIZE = 1000
 VAL_PERCENTAGE = 0.1
+RND_NULL_SIM = 0.1 #percentage of null similarities to add
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
@@ -260,6 +261,7 @@ class abPredictor:
     def _create_dataset(self):
         #load the slim matrix and the netflix dataset
         weight_matrix = joblib.load(SLIM_FILE)
+        num_items = weight_matrix.shape[0]
         print("Loaded weight matrix (y)")
         rdr = NetflixReader()
         print("Loaded products matrix (x)")
@@ -291,6 +293,20 @@ class abPredictor:
             counter +=1
             if (counter % 10000 == 0):
                 print(counter)
+        
+        #Now randomly add some couples with null similarity
+        for i1 in range(num_items):
+            for i2 in range(i1+1, num_items):
+                if weight_matrix[i1,i2] != 0:
+                    continue
+                if weight_matrix[i2,i1] != 0:
+                    continue
+                if random.random() < RND_NULL_SIM:
+                    x = s(i1,i2).toarray().flatten()
+                    y = 0.0
+                    Xs.append(x)
+                    ys.append(y)
+
  
         #take out some samples for validation
         X_train, X_val, y_train, y_val= train_test_split(Xs, ys, test_size=VAL_PERCENTAGE, random_state=1)
@@ -307,8 +323,9 @@ class abPredictor:
     ###COMPUTE THE SIMILARITY MATRIX USING THE NETWORK###
     #TODO
     def _compute_sim_matrix(self, list_of_items):
-        rdr = NetflixReader()
-        n_items = rdr.numItems
+        rdr = NetflixReader()        
+        weight_matrix = joblib.load(SLIM_FILE)
+        n_items = weight_matrix.shape[0]
         matrix = np.zeros((n_items,n_items), dtype=np.float32)
         
         print("Computing products")
