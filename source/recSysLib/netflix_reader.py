@@ -11,7 +11,7 @@ import scipy
 
 BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
-ICM_RED_MATRIX_FILE = "../../datasources/netflix/icm_red_mat.pkl"
+ICM_RED_MATRIX_FILE = "../../datasources/netflix/icm_red_mat_sample.pkl"
 ICM_RED_DICTIONARY_FILE = "../../datasources/netflix/icm_red_dict.pkl"
 PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
 NUM_PROD_MAT = 21
@@ -101,7 +101,7 @@ class NetflixReader:
             self._reduced_features_space = number_reduced_features
             print("\nFeatures have been cut, there are: {} reduced features".format(number_reduced_features))
 
-            self._build_reduced_feature_matrix()
+            self._build_reduced_feature_matrix(verbose = 2)
 #            self._build_reduced_feature_dict()
             with open(ICM_RED_MATRIX_FILE, 'wb') as f:
                 pickle.dump(self._icm_reduced_matrix, f, pickle.HIGHEST_PROTOCOL)
@@ -120,7 +120,8 @@ class NetflixReader:
     def test_reduced_matrix(self):
         print("Test reduced space as matrix")
         print("Type:{}, shape:{}".format(type(self._icm_reduced_matrix),self._icm_reduced_matrix.shape))
-        print("Type[0]:{}".format(type(self._icm_reduced_matrix[0,0])))
+        print("Type[0]:{} , [0]: {}".format(type(self._icm_reduced_matrix[0,0]),self._icm_reduced_matrix[0,0]))
+        print(self._icm_reduced_matrix)
         return
 
     def test_sorting(self, verbose = 0):
@@ -305,45 +306,70 @@ class NetflixReader:
             self._icm_dict[itemId].append(self._titles[itemId])
             
     def _build_reduced_feature_matrix(self, verbose = 0):
-        self._icm_reduced_matrix = sps.lil_matrix((self._icm_matrix.shape[1], self._reduced_features_space))
+        self._icm_reduced_matrix = sps.lil_matrix((self._icm_matrix.shape[1], self._reduced_features_space),dtype = bool)
         print("Reduced csc matrix shape {}".format(self._icm_reduced_matrix.shape))
         n_items = self._icm_matrix.shape[1]
 
-        for itemId in range(0, n_items):
+        for itemId in range(0, 2): #,n_items):
             new_col_index = 0
             if itemId%100 == 0:
                 print("ItemId: {}/{}".format(itemId, n_items))
             # Reduced features space. new_col_index = normalized index for feature columns
             if verbose > 0:
-                print("Actors: ",len(self._reduced_actor_indexes))
+                print("\nActors: ",len(self._reduced_actor_indexes))
             for actor in self._reduced_actor_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[actor, itemId].astype(bool)
+                if verbose > 1:
+                    print("Actor: {}, value: {}, bool:{}".format(actor, self._icm_matrix[actor, itemId],self._icm_matrix[actor, itemId].astype(bool)))
+                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
                 new_col_index += 1
+
             if verbose > 0:
-                print("Index: {} , Country {}".format(new_col_index,len(self._reduced_country_indexes)))
+                print("\nIndex: {} , Country {}".format(new_col_index,len(self._reduced_country_indexes)))
             for country in self._reduced_country_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[country, itemId].astype(bool)
+                if verbose > 1:
+                    print("Country: {}, value: {}, bool:{}".format(contry, self._icm_matrix[country, itemId],self._icm_matrix[country, itemId].astype(bool)))
+                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
                 new_col_index += 1
+
             if verbose > 0:
-                print("Index: {} , Director {}".format(new_col_index,len(self._reduced_director_indexes)))
+                print("\nIndex: {} , Director {}".format(new_col_index,len(self._reduced_director_indexes)))
             for director in self._reduced_director_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[director, itemId].astype(bool)
+                if verbose > 1:
+                    print("Director: {}, value: {}, bool:{}".format(director, self._icm_matrix[director, itemId],self._icm_matrix[director, itemId].astype(bool)))
+                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
                 new_col_index += 1
+
             if verbose > 0:
-                print("Index: {}, Genre {}".format(new_col_index, len(self._reduced_genres_indexes)))
+                print("\nIndex: {}, Genre {}".format(new_col_index, len(self._reduced_genres_indexes)))
             for genre in self._reduced_genres_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[genre, itemId].astype(bool)
+                if verbose > 1:
+                    print("Genre: {}, value: {}, bool:{}".format(genre, self._icm_matrix[genre, itemId],self._icm_matrix[genre, itemId].astype(bool)))
+                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
                 new_col_index += 1
+
             if verbose > 0:
-                print("Index: {}, Miniserie {}".format(new_col_index, len(self._miniseries_features)))
+                print("\nIndex: {}, Miniserie {}".format(new_col_index, len(self._miniseries_features)))
             for miniserie in self._miniseries_features:
+                print("Miniserie: {}, value: {}, bool:{}".format(miniserie, self._icm_matrix[miniserie, itemId],self._icm_matrix[miniserie, itemId].astype(bool)))
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[miniserie, itemId].astype(bool)
+                if verbose > 1:
+                    print("Miniserie: {}, value: {}, bool:{}".format(miniserie, self._icm_matrix[miniserie, itemId],self._icm_matrix[miniserie, itemId].astype(bool)))
+                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
                 new_col_index += 1
+
             if verbose > 0:
                 print("Index: ", new_col_index , " Tag ", len(self._reduced_tag_indexes))
             for tag in self._reduced_tag_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[tag, itemId].astype(bool)
+                if verbose > 1:
+                    print("Tag: {}, value: {}, bool:{}".format(tag, self._icm_matrix[tag, itemId],self._icm_matrix[tag, itemId].astype(bool)))
+                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
                 new_col_index  += 1
+
             if verbose > 0:
                 print("FINAL: ", new_col_index)
 
