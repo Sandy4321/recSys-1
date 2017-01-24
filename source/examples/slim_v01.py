@@ -43,7 +43,7 @@ if TO_COMPUTE_MATRIX:
     print("INIT SIM MATRIX COMPUTATION")
     model.fit(train_URMmatrix)
     weight_matrix = model.get_weight_matrix()
-    store_sparse_mat(weight_matrix,'../../datasorces/slimW_{}_{}.npz'.format(l1,l2))
+    store_sparse_mat(weight_matrix,'../../datasorces/slim/slimW_{}_{}.npz'.format(l1,l2))
 
     #print("SLIM similarity nnz: ",len(weight_matrix.nonzero()[0]))
     #print("weight-matrix:",weight_matrix)
@@ -66,7 +66,7 @@ if TO_COMPUTE_MATRIX:
 
 else:
     print("INIT SIM MATRIX LOADING")
-    weight_matrix = load_sparse_mat('../../datasources/slimW_{}_{}.npz'.format(l1,l2))
+    weight_matrix = load_sparse_mat('../../datasources/slim/slimW_{}_{}.npz'.format(l1,l2))
     model.set_urm_matrix(test_URMmatrix)
     model.set_weight_matrix(weight_matrix)
     #print(weight_matrix)

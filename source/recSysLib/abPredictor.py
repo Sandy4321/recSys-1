@@ -38,7 +38,7 @@ AB_FILE_X_VAL = BASE_FILE + "X_val.pkl"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
 AB_FILE_Y_VAL = BASE_FILE + "Y_val.npy"
 FILE = BASE_FILE + "ab_model.npz"
-SLIM_FILE = "../../datasources/slimW_0.1_10.npz"
+SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
 
 
 class abPredictor:
