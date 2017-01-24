@@ -22,13 +22,13 @@ if USE_ENTIRE_FEATURES:
     NUM_FEATURES = 4701
 
 GAUSSIAN_NOISE_SIGMA = 0.
-LEARNING_RATE = 0.001
-L2_LAMBDA = 0.1
+LEARNING_RATE = 0.00000500
+L2_LAMBDA = 0.00001000
 
-NUM_EPOCHS = 20
-BATCH_SIZE = 1000
+NUM_EPOCHS = 100
+BATCH_SIZE = 20000
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.02 #percentage of null similarities to add
+RND_NULL_SIM = 0.01 #percentage of null similarities to add
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
@@ -350,8 +350,9 @@ class abPredictor:
     
 if __name__ == '__main__':
     a = abPredictor()
+    #a.explore_hyperparameters()
     #a.fit_network()
 
-    b = a._compute_sim_matrix(range(0,10))
+    b = a._compute_sim_matrix(range(0,100))
     print(b)
     print(np.sum(np.abs(b)))
