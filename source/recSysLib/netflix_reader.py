@@ -91,7 +91,7 @@ class NetflixReader:
 
             # Features cutting
             print("\nCut features")
-            number_reduced_features = 2 # refers to the year and miniseries
+            number_reduced_features = 1 # refers to miniseries
             cutting_thresholds = {'tag':15,'genres':2,'actor':10,'country':2,'director':5}
             number_reduced_features += self._cut_tag_by_pop(cutting_thresholds['tag'], verbose=1)
             number_reduced_features += self._cut_genres_by_pop(cutting_thresholds['genres'], verbose=1)
@@ -304,43 +304,48 @@ class NetflixReader:
             self._icm_dict[itemId].append(int(self._icm_stems[self._years_features[year_feat]][0][0]))
             self._icm_dict[itemId].append(self._titles[itemId])
             
-    def _build_reduced_feature_matrix(self):
+    def _build_reduced_feature_matrix(self, verbose = 0):
         self._icm_reduced_matrix = sps.lil_matrix((self._icm_matrix.shape[1], self._reduced_features_space))
         print("Reduced csc matrix shape {}".format(self._icm_reduced_matrix.shape))
+        n_items = self._icm_matrix.shape[1]
 
-        for itemId in range(0, self._icm_matrix.shape[1]):
+        for itemId in range(0, n_items):
             new_col_index = 0
+            if itemId%100 == 0:
+                print("ItemId: {}/{}".format(itemId, n_items))
             # Reduced features space. new_col_index = normalized index for feature columns
-            print("Actors: ",len(self._reduced_actor_indexes))
+            if verbose > 0:
+                print("Actors: ",len(self._reduced_actor_indexes))
             for actor in self._reduced_actor_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[actor, itemId].astype(bool)
                 new_col_index += 1
-            print("Index: {} , Country {}".format(new_col_index,len(self._reduced_country_indexes)))
+            if verbose > 0:
+                print("Index: {} , Country {}".format(new_col_index,len(self._reduced_country_indexes)))
             for country in self._reduced_country_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[country, itemId].astype(bool)
                 new_col_index += 1
-            print("Index: {} , Director {}".format(new_col_index,len(self._reduced_director_indexes)))
+            if verbose > 0:
+                print("Index: {} , Director {}".format(new_col_index,len(self._reduced_director_indexes)))
             for director in self._reduced_director_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[director, itemId].astype(bool)
                 new_col_index += 1
-            print("Index: {}, Genre {}".format(new_col_index, len(self._reduced_genres_indexes)))
+            if verbose > 0:
+                print("Index: {}, Genre {}".format(new_col_index, len(self._reduced_genres_indexes)))
             for genre in self._reduced_genres_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[genre, itemId].astype(bool)
                 new_col_index += 1
-            print("Index: {}, Miniserie {}".format(new_col_index, len(self._miniseries_features)))
+            if verbose > 0:
+                print("Index: {}, Miniserie {}".format(new_col_index, len(self._miniseries_features)))
             for miniserie in self._miniseries_features:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[miniserie, itemId].astype(bool)
                 new_col_index += 1
-            print("Index: {}, Year {}".format(new_col_index, 1))
-            # Not reduced (year), the title is not considered in this space
-            year_feat = self._icm_matrix[self._years_features,itemId].astype(bool).indices[0]
-            self._icm_reduced_matrix[itemId, new_col_index] = int(self._icm_stems[self._years_features[year_feat]][0][0])
-            new_col_index += 1
-            print("Index: ", new_col_index , " Tag ", len(self._reduced_tag_indexes))
+            if verbose > 0:
+                print("Index: ", new_col_index , " Tag ", len(self._reduced_tag_indexes))
             for tag in self._reduced_tag_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[tag, itemId].astype(bool)
                 new_col_index  += 1
-            print("FINAL: ", new_col_index)
+            if verbose > 0:
+                print("FINAL: ", new_col_index)
 
     def _build_reduced_feature_dict(self):
         self._icm_reduced_dict = {}
