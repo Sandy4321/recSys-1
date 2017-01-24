@@ -78,17 +78,19 @@ class NetflixReader:
                 
         try:
             with open(ICM_RED_MATRIX_FILE, 'rb') as f:
-                self._icm_reduced_dict = pickle.load(f)
+                self._icm_reduced_matrix = pickle.load(f)
         except:
             print("Building reduced icm dictionary - matrix")
+            print("Sorting features")
             self._sort_tag_by_pop()
             self._sort_genres_by_pop()
             self._sort_actor_by_pop()
             self._sort_country_by_pop()
             self._sort_director_by_pop()
-            print("\nFeatures have been sorted")
+            print("Features have been sorted")
 
             # Features cutting
+            print("\nCut features")
             number_reduced_features = 2 # refers to the year and miniseries
             cutting_thresholds = {'tag':15,'genres':2,'actor':10,'country':2,'director':5}
             number_reduced_features += self._cut_tag_by_pop(cutting_thresholds['tag'], verbose=1)
@@ -103,7 +105,7 @@ class NetflixReader:
 #            self._build_reduced_feature_dict()
             with open(ICM_RED_MATRIX_FILE, 'wb') as f:
                 pickle.dump(self._icm_reduced_matrix, f, pickle.HIGHEST_PROTOCOL)
-        self._urm['TOGLIMI CHE TANTO SONO UN BLOCCO']
+
 
         #try to load the matrix of products
         try:
@@ -115,6 +117,12 @@ class NetflixReader:
             self._store_prod_mat()
             self._load_prod_mat()
     
+    def test_reduced_matrix(self):
+        print("Test reduced space as matrix")
+        print("Type:{}, shape:{}".format(type(self._icm_reduced_matrix),self._icm_reduced_matrix.shape))
+        print("Type[0]:{}".format(type(self._icm_reduced_matrix[0,0])))
+        return
+
     def test_sorting(self, verbose = 0):
         self._sort_tag_by_pop()
         if verbose > 0:
@@ -300,7 +308,7 @@ class NetflixReader:
         self._icm_reduced_matrix = sps.lil_matrix((self._icm_matrix.shape[1], self._reduced_features_space))
         print("Reduced csc matrix shape {}".format(self._icm_reduced_matrix.shape))
 
-        for itemId in range(0, 3): #self._icm_matrix.shape[1]):
+        for itemId in range(0, self._icm_matrix.shape[1]):
             new_col_index = 0
             # Reduced features space. new_col_index = normalized index for feature columns
             print("Actors: ",len(self._reduced_actor_indexes))
@@ -524,6 +532,7 @@ def _help_compute_matrix(x):
 
 if __name__ == '__main__':
     a = NetflixReader()
+    a.test_reduced_matrix()
     print("loaded")
     
     import time
