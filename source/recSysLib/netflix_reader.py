@@ -101,7 +101,7 @@ class NetflixReader:
             self._reduced_features_space = number_reduced_features
             print("\nFeatures have been cut, there are: {} reduced features".format(number_reduced_features))
 
-            self._build_reduced_feature_matrix(verbose = 2)
+            self._build_reduced_feature_matrix(verbose = 0)
 #            self._build_reduced_feature_dict()
             with open(ICM_RED_MATRIX_FILE, 'wb') as f:
                 pickle.dump(self._icm_reduced_matrix, f, pickle.HIGHEST_PROTOCOL)
@@ -310,7 +310,7 @@ class NetflixReader:
         print("Reduced csc matrix shape {}".format(self._icm_reduced_matrix.shape))
         n_items = self._icm_matrix.shape[1]
 
-        for itemId in range(0, 2): #,n_items):
+        for itemId in range(0, n_items):
             new_col_index = 0
             if itemId%100 == 0:
                 print("ItemId: {}/{}".format(itemId, n_items))
@@ -320,8 +320,8 @@ class NetflixReader:
             for actor in self._reduced_actor_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[actor, itemId].astype(bool)
                 if verbose > 1:
-                    print("Actor: {}, value: {}, bool:{}".format(actor, self._icm_matrix[actor, itemId],self._icm_matrix[actor, itemId].astype(bool)))
-                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
+                    print("\nActor: {}, value: {}, bool:{}".format(actor, self._icm_matrix[actor, itemId],self._icm_matrix[actor, itemId].astype(bool)))
+                    print("Setted value: {} , index {}".format(self._icm_reduced_matrix[itemId, new_col_index], new_col_index))
                 new_col_index += 1
 
             if verbose > 0:
@@ -329,8 +329,8 @@ class NetflixReader:
             for country in self._reduced_country_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[country, itemId].astype(bool)
                 if verbose > 1:
-                    print("Country: {}, value: {}, bool:{}".format(contry, self._icm_matrix[country, itemId],self._icm_matrix[country, itemId].astype(bool)))
-                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
+                    print("\nCountry: {}, value: {}, bool:{}".format(country, self._icm_matrix[country, itemId],self._icm_matrix[country, itemId].astype(bool)))
+                    print("Setted value: {} , index {}".format(self._icm_reduced_matrix[itemId, new_col_index], new_col_index))
                 new_col_index += 1
 
             if verbose > 0:
@@ -338,8 +338,8 @@ class NetflixReader:
             for director in self._reduced_director_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[director, itemId].astype(bool)
                 if verbose > 1:
-                    print("Director: {}, value: {}, bool:{}".format(director, self._icm_matrix[director, itemId],self._icm_matrix[director, itemId].astype(bool)))
-                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
+                    print("\nDirector: {}, value: {}, bool:{}".format(director, self._icm_matrix[director, itemId],self._icm_matrix[director, itemId].astype(bool)))
+                    print("Setted value: {} , index {}".format(self._icm_reduced_matrix[itemId, new_col_index], new_col_index))
                 new_col_index += 1
 
             if verbose > 0:
@@ -347,8 +347,8 @@ class NetflixReader:
             for genre in self._reduced_genres_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[genre, itemId].astype(bool)
                 if verbose > 1:
-                    print("Genre: {}, value: {}, bool:{}".format(genre, self._icm_matrix[genre, itemId],self._icm_matrix[genre, itemId].astype(bool)))
-                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
+                    print("\nGenre: {}, value: {}, bool:{}".format(genre, self._icm_matrix[genre, itemId],self._icm_matrix[genre, itemId].astype(bool)))
+                    print("Setted value: {} , index {}".format(self._icm_reduced_matrix[itemId, new_col_index], new_col_index))
                 new_col_index += 1
 
             if verbose > 0:
@@ -357,8 +357,8 @@ class NetflixReader:
                 print("Miniserie: {}, value: {}, bool:{}".format(miniserie, self._icm_matrix[miniserie, itemId],self._icm_matrix[miniserie, itemId].astype(bool)))
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[miniserie, itemId].astype(bool)
                 if verbose > 1:
-                    print("Miniserie: {}, value: {}, bool:{}".format(miniserie, self._icm_matrix[miniserie, itemId],self._icm_matrix[miniserie, itemId].astype(bool)))
-                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
+                    print("\nMiniserie: {}, value: {}, bool:{}".format(miniserie, self._icm_matrix[miniserie, itemId],self._icm_matrix[miniserie, itemId].astype(bool)))
+                    print("Setted value: {} , index {}".format(self._icm_reduced_matrix[itemId, new_col_index], new_col_index))
                 new_col_index += 1
 
             if verbose > 0:
@@ -366,8 +366,8 @@ class NetflixReader:
             for tag in self._reduced_tag_indexes:
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[tag, itemId].astype(bool)
                 if verbose > 1:
-                    print("Tag: {}, value: {}, bool:{}".format(tag, self._icm_matrix[tag, itemId],self._icm_matrix[tag, itemId].astype(bool)))
-                    print("Setted value:",self._icm_reduced_matrix[itemId, new_col_index])
+                    print("\nTag: {}, value: {}, bool:{}".format(tag, self._icm_matrix[tag, itemId],self._icm_matrix[tag, itemId].astype(bool)))
+                    print("Setted value: {} , index {}".format(self._icm_reduced_matrix[itemId, new_col_index], new_col_index))
                 new_col_index  += 1
 
             if verbose > 0:
