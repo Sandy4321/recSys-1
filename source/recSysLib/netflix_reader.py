@@ -65,7 +65,7 @@ class NetflixReader:
         #Skip the title as we have a separate file fo them and do the year
         self._years_features = np.where(self._icm_stemtypes == 'Year')[0].tolist()
         
-
+        
         #try to load the icm dictionary
         try:
             with open(ICM_DICTIONARY_FILE, 'rb') as f:
@@ -354,7 +354,6 @@ class NetflixReader:
             if verbose > 0:
                 print("\nIndex: {}, Miniserie {}".format(new_col_index, len(self._miniseries_features)))
             for miniserie in self._miniseries_features:
-                print("Miniserie: {}, value: {}, bool:{}".format(miniserie, self._icm_matrix[miniserie, itemId],self._icm_matrix[miniserie, itemId].astype(bool)))
                 self._icm_reduced_matrix[itemId, new_col_index] = self._icm_matrix[miniserie, itemId].astype(bool)
                 if verbose > 1:
                     print("\nMiniserie: {}, value: {}, bool:{}".format(miniserie, self._icm_matrix[miniserie, itemId],self._icm_matrix[miniserie, itemId].astype(bool)))
@@ -515,14 +514,9 @@ class NetflixReader:
     
     def _similarity_features(self, movieId1, movieId2):
         return scipy.sparse.vstack((
-            self._icm_reduced_dict[movieId1][0].multiply(self._icm_reduced_dict[movieId2][0]),
-            self._icm_reduced_dict[movieId1][1].multiply(self._icm_reduced_dict[movieId2][1]),
-            self._icm_reduced_dict[movieId1][2].multiply(self._icm_reduced_dict[movieId2][2]),
-            self._icm_reduced_dict[movieId1][3].multiply(self._icm_reduced_dict[movieId2][3]),
-            self._icm_reduced_dict[movieId1][4] * self._icm_reduced_dict[movieId2][4],
+            self._icm_reduced_matrix[movieId1].multiply(self._icm_reduced_matrix[movieId2]).transpose(),
             [self._similarity_years(movieId1, movieId2)],
-            [self._similarity_titles(movieId1, movieId2)],
-            self._icm_reduced_dict[movieId1][7].multiply(self._icm_reduced_dict[movieId2][7])
+            [self._similarity_titles(movieId1, movieId2)]
             ))
     
     
