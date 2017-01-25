@@ -1,4 +1,4 @@
-import nupmy as np
+import numpy as np
 import scipy.sparse as sps
 import scipy.stats as stats
 from .base import Recommender,check_matrix
@@ -34,20 +34,19 @@ class Simple_CBF(Recommender):
             print("Item Indexes {},\nlen: {}".format(item_indexes,
                                                      len(item_indexes)))
     
-        self.weight_matrix =
-        sps.lil_matrix((len(item_indexes),len(item_indexes)), dtype=np.float32)
+        self.weight_matrix = sps.lil_matrix((len(item_indexes),len(item_indexes)), dtype=np.float32)
         for i in item_indexes[:3]:
             for j in item_indexes[:3]:
                 if metric == 'Pearson':
                     c = stats.pearsonr(X[i], X[j])
                     if verbose > 0:
-                        print("item-1: {}\nitem-2:{}: sim
-                              {}".format(X[i], X[j], c))
+                        print("item-1: {}\nitem-2:{}: sim{}".format(X[i], X[j], c))
                 self.weight_matrix[i,j] = c
 
         if verbose > 0:
             print("Final weight matrix: {}".format(self.weight_matrix))
 
-            
+    def get_weight_matrix(self):
+        return self.weight_matrix
 
 
