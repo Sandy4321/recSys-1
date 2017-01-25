@@ -65,7 +65,7 @@ evaluator.decompose_urm_matrix(k, verbose = 0)
 evaluator.set_urm_matrix(evaluator.get_residual_csc())
 
 users_test = np.unique(test_URMmatrix.nonzero()[0])
-evaluation_URMmatrix = model_slim.get_sampled_csc()
+evaluation_URMmatrix = evaluator.get_sampled_csc()
 
 import multiprocessing
 pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
