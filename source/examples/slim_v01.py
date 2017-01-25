@@ -3,6 +3,7 @@ from recSysLib.data_split import holdout
 from recSysLib.data_utils import get_urm, load_sparse_mat, store_sparse_mat
 from recSysLib.metrics import precision, recall
 from recSysLib import slim
+from recSysLib import abPredictor as abp
 
 import numpy as np
 
@@ -19,6 +20,11 @@ k = 5 # Number of k-items to make the evaluation on
 
 l1 = 0.1
 l2 = 100000
+
+BASELINE = '../../datasources/slim/'
+
+verbose = 1 # Not all the print are related to prints! Some are persistent.
+
 
 #A) INIT
 # Dataset loading and partitioning
@@ -43,7 +49,7 @@ if TO_COMPUTE_MATRIX:
     print("INIT SIM MATRIX COMPUTATION")
     model.fit(train_URMmatrix)
     weight_matrix = model.get_weight_matrix()
-    store_sparse_mat(weight_matrix,'../../datasorces/slim/slimW_{}_{}.npz'.format(l1,l2))
+    store_sparse_mat(weight_matrix,BASELINE + 'slimW_{}_{}.npz'.format(l1,l2))
 
     #print("SLIM similarity nnz: ",len(weight_matrix.nonzero()[0]))
     #print("weight-matrix:",weight_matrix)
@@ -65,13 +71,14 @@ if TO_COMPUTE_MATRIX:
     #print("Iteration {} , l1 - l2 coeff: {}@{}, precision: {}, recall : {}".format(iteration,l1,l2,metric_,metric_1))
 
 else:
-    print("INIT SIM MATRIX LOADING")
-    weight_matrix = load_sparse_mat('../../datasources/slim/slimW_{}_{}.npz'.format(l1,l2))
+    print("INIT _ SIM MATRIX LOADING")
+    weight_matrix = load_sparse_mat(BASELINE + 'slimW_{}_{}.npz'.format(l1,l2))
     model.set_urm_matrix(test_URMmatrix)
     model.set_weight_matrix(weight_matrix)
     #print(weight_matrix)
-    print("Weight Matrix type: ",type(weight_matrix))
-    print("Weight Matrix shape: ",weight_matrix.shape)
+    if verbose > 0:
+        print("Weight Matrix type: ",type(weight_matrix))
+        print("Weight Matrix shape: ",weight_matrix.shape)
 
 
 #C) EVALUATION
@@ -84,29 +91,34 @@ metric_ = 0.0
 metric_1 = 0.0
 iteration = 0
 
+abPredictor = abp.abPredictor()
+
 # Compute residual and sampled matrices. (holdout for evaluation)
 print("DECOMPOSITION")
-model.decompose_urm_matrix(k, verbose = 1)
+model.decompose_urm_matrix(k, verbose = 0)
 # Set of learning matrix as the sampled_csc
 print("PRE-EVAL")
-model.set_urm_matrix(model.get_sampled_csc())
+model.set_urm_matrix(model.get_residual_csc())
+model.set_weight_matrix(abPredictor.get_weight_matrix())
 #print(weight_matrix)
 
 users_test = np.unique(test_URMmatrix.nonzero()[0])
 #print(test_URMmatrix)
 print("\nITERATION FOR EVALUATION")
-evaluation_URMmatrix = model.get_residual_csc()
+evaluation_URMmatrix = model.get_sampled_csc()
 for user_to_test in users_test:
     iteration += 1
     if iteration%100 == 0:
         print("Iteration: {} over {}".format(iteration, len(users_test)))
     relevant_items = evaluation_URMmatrix[user_to_test].nonzero()[1]
     #print(test_URMmatrix[user_to_test])
-    if len(relevant_items) > 2*k:
+    if len(relevant_items) > 0:
         n_eval += 1
         #print("SHAPES: train_URM {}, test_URM {}, weight {}, test_URM[u] {}".format(train_URMmatrix.shape, test_URMmatrix.shape, weight_matrix.shape, test_URMmatrix[user_to_test].shape))
-        recommended_items = model.recommend(user_id = user_to_test, exclude_seen=False)
-        #print("relevant items: {}\nrecommended items:{}\n".format(relevant_items, recommended_items))
+        recommended_items = model.recommend(user_id = user_to_test,
+                                            exclude_seen=True)
+        print("relevant items: {}\nrecommended items: {}\nother items: {}\n\n".
+              format(relevant_items, recommended_items,model._get_user_ratings(user_to_test)))
         metric_ += precision(recommended_items, relevant_items, at=k)
         metric_1 += recall(recommended_items, relevant_items, at=k)
         #print(metric_,metric_1)

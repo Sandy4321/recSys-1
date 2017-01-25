@@ -47,6 +47,7 @@ class Recommender(object):
 
     def _filter_seen(self, user_id, ranking):
         user_profile = self._get_user_ratings(user_id)
-        seen = user_profile.indices
+        #seen = user_profile.indices
+        seen = list(user_profile.nonzero()[1])
         unseen_mask = np.in1d(ranking, seen, assume_unique=True, invert=True)
         return ranking[unseen_mask]
