@@ -21,11 +21,14 @@ class Simple_CBF(Recommender):
         self.metric = metric
         self.icm = X
 
+        # Weight matrix computation
+        self._compute_weight_matrix(verbose = 0)
+
     # toString()
     def __str__(self):
         return "Simple_CBF(metric ='{}')".format(self.metric)
 
-    def fit(self, verbose = 0):
+    def _compute_weight_matrix(self, verbose = 0):
         X = check_matrix(self.icm, format='csc', dtype=np.int32)
         print("Init CBF weight matrix computation")
         if verbose > 0:
