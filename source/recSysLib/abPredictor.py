@@ -30,6 +30,8 @@ BATCH_SIZE = 20000
 VAL_PERCENTAGE = 0.1
 RND_NULL_SIM = 0.01 #percentage of null similarities to add
 
+MIN_SIMILARITY = 1e-4
+
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
@@ -39,6 +41,7 @@ AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
 AB_FILE_Y_VAL = BASE_FILE + "Y_val.npy"
 FILE = BASE_FILE + "ab_model.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat.npz"
 
 
 class abPredictor:
@@ -322,37 +325,38 @@ class abPredictor:
         
         
     ###COMPUTE THE SIMILARITY MATRIX USING THE NETWORK###
-    #TODO
-    def _compute_sim_matrix(self, list_of_items):
+    def _compute_sim_matrix(self):
         rdr = NetflixReader()        
         weight_matrix = joblib.load(SLIM_FILE)
         n_items = weight_matrix.shape[0]
         matrix = np.zeros((n_items,n_items), dtype=np.float32)
         
         print("Computing products")
-        products = list()
-        indices = list()
-        for movieId1 in list_of_items:
-            for movieId2 in list_of_items:
+        for movieId1 in range(n_items):
+            print(movieId1)
+            for movieId2 in range(n_items):
                 if movieId2 <= movieId1:
                     continue
-                products.append(rdr._similarity_features(movieId1, movieId2).toarray().flatten().astype(np.float32))
-                indices.append((movieId1, movieId2))
-        
-        similarities = self._predict_fn(np.array(products))
-        
-        for (idx, sim) in zip(indices, similarities):
-            matrix[idx[0], idx[1]] = sim
-            matrix[idx[1], idx[0]] = sim
-        
+                products = rdr._similarity_features(movieId1,
+                                                    movieId2).toarray().flatten().astype(np.float32)
+                similarity = self._predict_fn([products])
+                if similarity >= MIN_SIMILARITY:
+                    matrix[movieId1, movieId2] = similarity
+                    matrix[movieId2, movieId1] = similarity
+
         return scipy.sparse.csc_matrix(matrix)
-        
+
+
+    ###GET THE SIMILARITY MATRIX COMPUTED BY THE NETWORK###
+    def get_weight_matrix(self):
+        matrix = joblib.load(COMPUTED_SIM_MATRIX)
+        matrix[matrix < MIN_SIMILARITY] = 0.0
+        return matrix
     
 if __name__ == '__main__':
     a = abPredictor()
     #a.explore_hyperparameters()
     #a.fit_network()
 
-    b = a._compute_sim_matrix(range(0,100))
-    print(b)
-    print(np.sum(np.abs(b)))
+    b = a._compute_sim_matrix()
+    joblib.dump(b, COMPUTED_SIM_MATRIX)
