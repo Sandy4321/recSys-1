@@ -31,21 +31,23 @@ class Simple_CBF(Recommender):
             print("ICM conversion to csc sparse matrix")
             print("ICM type: {}, shape: {}".format(type(X), X.shape))
 
-        item_indexes = X.nonzero()[1]
-        
+        item_indexes = np.unique(X.nonzero()[0])
+
         if verbose > 0:
             print("Item Indexes {},\nlen: {}".format(item_indexes,
                                                      len(item_indexes)))
-    
+
         try:
             with open(WEIGHT_CBF, 'rb') as in_file:
                 self._weight_matrix = pickle.load(in_file)
             print("Load CBF weight matrix")
-        except: 
-            self.weight_matrix = sps.lil_matrix((len(item_indexes),len(item_indexes)), dtype=np.float32)
-
+        except:
+            self._weight_matrix = sps.lil_matrix((len(item_indexes),len(item_indexes)), dtype=np.float32)
+            print(item_indexes)
             for i in item_indexes:
-                if i%100==0:
+                tmp_sentinel = True
+                if i%100==0 and tmp_sentinel:
+                    tmp_sentinel = False
                     print("Iteration {} in CBF".format(i))
                 for j in item_indexes:
                     if i <= j:
@@ -59,18 +61,18 @@ class Simple_CBF(Recommender):
                             print("item-1: {}\nitem-2:{}:sim{}".format(X[i].nonzero()[1],X[j].nonzero()[1], c))
                         
                     if c > MIN_SIM:
-                        self.weight_matrix[i,j] = c
-                        self.weight_matrix[j,i] = c
+                        self._weight_matrix[i,j] = c
+                        self._weight_matrix[j,i] = c
             if verbose > 0:
-                print("Final weight matrix: {}".format(self.weight_matrix))
+                print("Final weight matrix: {}".format(self._weight_matrix))
             
             with open(WEIGHT_CBF, 'wb') as out_file:
-                pickle.dump(self.weight_matrix, out_file, pickle.HIGHEST_PROTOCOL) 
+                pickle.dump(self._weight_matrix, out_file, pickle.HIGHEST_PROTOCOL) 
             
             print("Weight computation - CBF, END") 
 
     def get_weight_matrix(self):
-        return self.weight_matrix
+        return self._weight_matrix
 
     def recommend(self, user_id, n=None, exclude_seen=True):
         # compute the scores using the dot product
