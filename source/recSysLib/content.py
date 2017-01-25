@@ -12,6 +12,7 @@ class Simple_CBF(Recommender):
     Train a CBF algorithm. The followed pattern consists of computing the 
     weight matrix smilarity by leveraging on existing metrics such as: Pearson,
     TF-IDF ...
+    For the moment only Pearson similarity is available.
     """
     
     # Initialization
@@ -73,21 +74,3 @@ class Simple_CBF(Recommender):
 
     def get_weight_matrix(self):
         return self._weight_matrix
-
-    def recommend(self, user_id, n=None, exclude_seen=True):
-        # compute the scores using the dot product
-        user_profile = self._get_user_ratings(user_id)
-        scores = user_profile.dot(self.W_sparse).toarray().ravel()
-        ranking = scores.argsort()[::-1]
-                                    
-        # rank items
-        if exclude_seen:
-            ranking = self._filter_seen(user_id, ranking)
-        
-        return ranking[:n]
-
-    def predict_rates(self, user_id, exclude_seen=True, verbose=0):
-        user_profile = self._get_user_ratings(user_id)
-        scores = user_profile.dot(self.W_sparse).toarray().ravel()
-        if verbose > 0:
-            print(scores)

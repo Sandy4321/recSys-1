@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
 from sklearn.linear_model import ElasticNet
-from .base import Recommender,check_matrix
+from base import Recommender,check_matrix
 import random
 import pickle
 
