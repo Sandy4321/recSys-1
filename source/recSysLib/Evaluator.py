@@ -91,4 +91,3 @@ class Evaluator():
             with open(RESIDUAL_CSC, 'wb') as outfile:
                 pickle.dump(self.residual_csc, outfile, pickle.HIGHEST_PROTOCOL)
             print("Saved sampled and residual matrices")
-            print("Saved sampled and residual matrices")

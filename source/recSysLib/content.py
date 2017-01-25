@@ -16,17 +16,17 @@ class Simple_CBF(Recommender):
     """
     
     # Initialization
-    def __init__(self, metric ='Pearson'):
+    def __init__(self, X, metric ='Pearson'):
         super(Simple_CBF, self).__init__()
         self.metric = metric
+        self.icm = X
 
     # toString()
     def __str__(self):
         return "Simple_CBF(metric ='{}')".format(self.metric)
 
-    def fit(self, X, verbose = 0):
-        self.icm = X
-        X = check_matrix(X, format='csc', dtype=np.int32)
+    def fit(self, verbose = 0):
+        X = check_matrix(self.icm, format='csc', dtype=np.int32)
         print("Init CBF weight matrix computation")
         if verbose > 0:
             print("ICM conversion to csc sparse matrix")
