@@ -2,9 +2,9 @@ from recSysLib.dataset_partition import DataPartition
 from recSysLib.data_split import holdout
 from recSysLib.data_utils import get_urm, load_sparse_mat, store_sparse_mat
 from recSysLib.metrics import precision, recall
-from recSysLib import slim, 
+from recSysLib import slim, content 
 from recSysLib import abPredictor as abp
-
+from recSysLib.netflix_reader import NetflixReader
 import numpy as np
 
 
@@ -22,9 +22,11 @@ l1 = 0.1
 l2 = 100000
 
 BASELINE = '../../datasources/slim/'
+USAGE = "CBF"
 
 verbose = 1 # Not all the print are related to prints! Some are persistent.
 
+netflix_reader = NetflixReader()
 
 #A) INIT
 # Dataset loading and partitioning
@@ -35,6 +37,8 @@ urm_partition.split_cross(train_perc_col=percentage_train_col, train_perc_row=pe
 
 train_URMmatrix = urm_partition.get_upLeft_matrix()
 test_URMmatrix = urm_partition.get_lowLeft_matrix()
+
+icm_reduced_matrix = netflix_reader._icm_reduced_matrix
 
 #B) WEIGHT MATRIX COMPUTATION 
 print("Original: {} , train : {} , test: {} ".format(netflix_urm.shape,train_URMmatrix.shape, test_URMmatrix.shape))
@@ -73,13 +77,13 @@ if TO_COMPUTE_MATRIX:
 
 else:
     print("INIT _ SIM MATRIX LOADING")
-    weight_matrix = load_sparse_mat(BASELINE + 'slimW_{}_{}.npz'.format(l1,l2))
+    weight_matrix_slim = load_sparse_mat(BASELINE + 'slimW_{}_{}.npz'.format(l1,l2))
     model_slim.set_urm_matrix(test_URMmatrix)
-    model_slim.set_weight_matrix(weight_matrix)
+    #model_slim.set_weight_matrix(weight_matrix)
     #print(weight_matrix)
     if verbose > 0:
-        print("Weight Matrix type: ",type(weight_matrix))
-        print("Weight Matrix shape: ",weight_matrix.shape)
+        print("Weight Matrix type: ",type(weight_matrix_slim))
+        print("Weight Matrix shape: ",weight_matrix_slim.shape)
 
 
 #C) EVALUATION
@@ -95,12 +99,20 @@ iteration = 0
 abPredictor = abp.abPredictor()
 
 # Compute residual and sampled matrices. (holdout for evaluation)
-print("DECOMPOSITION")
+print("HOLDOUT SPLITTING")
 model_slim.decompose_urm_matrix(k, verbose = 0)
 # Set of learning matrix as the sampled_csc
 print("PRE-EVAL")
 model_slim.set_urm_matrix(model_slim.get_residual_csc())
-model_slim.set_weight_matrix(abPredictor.get_weight_matrix())
+
+if USAGE == "CBF":
+    model_cbf.fit(icm_reduced_matrix, verbose = 0)
+    model_slim.set_weight_matrix(model_cbf.get_weight_matrix())
+elif USAGE == "ABP":
+    model_slim.set_weight_matrix(abPredictor.get_weight_matrix())
+elif USAGE == "SLIM":
+    model_slim.set_weight_matrix(weight_matrix_slim)
+#evaluation_URMmatrix = model_slim.get_sampled_csc()
 #print(weight_matrix)
 
 
@@ -113,15 +125,16 @@ def _do_user(user_to_test):
         prec = precision(recommended_items, relevant_items, at=k)
         rec = recall(recommended_items, relevant_items, at=k)
         return (prec, rec)
+    return (np.nan, np.nan)
 
-users_test = [1,2,3,4,5,6,7,8]#np.unique(test_URMmatrix.nonzero()[0])
+users_test = np.unique(test_URMmatrix.nonzero()[0])
 #print(test_URMmatrix)
 print("\nITERATION FOR EVALUATION")
 evaluation_URMmatrix = model_slim.get_sampled_csc()
 import multiprocessing
 pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
 res = pool.map(_do_user, (u for u in users_test))
-
+res = np.array(res)
 print(res)
 
-print("The precision is {} and the recall: {}".format(metric_,metric_1))
+print("The precision and recall are: {}".format(np.nanmean(res, axis=0)))
