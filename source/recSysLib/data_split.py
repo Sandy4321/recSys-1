@@ -3,7 +3,7 @@ import random
 import scipy.sparse as sps
 from sklearn.model_selection import train_test_split
 
-def holdout(data, perc=0.99, seed=1234, clean_test=True):
+def holdout_user(data, perc=0.99, seed=1234, clean_test=True):
     pos_r_inds = data > 3
     #print("LEN INDPTR: ",len(pos_r_inds.indptr))
     #print(pos_r_inds.nonzero())
@@ -29,3 +29,16 @@ def holdout(data, perc=0.99, seed=1234, clean_test=True):
     new_mat = new_mat_lil.tocsr()
     data[row_samples,col_samples] = 0
     return data, new_mat
+
+def holdout(data, perc_cut=0.20):
+    positive_data = data > 3
+    n_rows, n_cols = positive_data.shape
+    n_values = positive_data.nnz
+
+    n_cutted_values = perc_cut * n_values
+
+    if verbose > 0:
+        print("Data shape: {}, original nnz: {}, positive nnz:{}".format(data.shape, positive_data.nnz, positive_data.nnz))
+        print("Number of cutted items {}".format(n_cutted_values))
+
+

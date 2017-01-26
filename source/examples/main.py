@@ -25,7 +25,7 @@ k = 5 # Number of k-items to make the evaluation on
 l1 = 0.1
 l2 = 100000
 
-USAGE = "CBF"
+USAGE = "SLIM"
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
@@ -47,7 +47,7 @@ print("Original: {} , train : {} , test: {} ".format(netflix_urm.shape, train_UR
 
 #B) MODEL SELECTION STAGE
 if USAGE == "SLIM":
-    model = slim.MultiThreadSLIM(l1_penalty=l1,l2_penalty=l2)
+    model = slim.MultiThreadSLIM(train_URMmatrix, l1_penalty=l1,l2_penalty=l2)
 elif USAGE == "CBF":
     model = content.Simple_CBF(icm_reduced_matrix, 'Pearson')
 elif USAGE == "ABP":
@@ -60,12 +60,25 @@ weight_matrix = model.get_weight_matrix()
 evaluator = Evaluator(test_URMmatrix, weight_matrix)
 
 # Compute residual and sampled matrices. (holdout for evaluation)
-evaluator.decompose_urm_matrix(k, verbose = 0)
+evaluator.holdout(verbose = 1)
 # Set of learning matrix as the sampled_csc
 evaluator.set_urm_matrix(evaluator.get_residual_csc())
 
 users_test = np.unique(test_URMmatrix.nonzero()[0])
 evaluation_URMmatrix = evaluator.get_sampled_csc()
+
+
+##Helper function to do a single user
+def _do_user(user_to_test):
+    relevant_items = evaluation_URMmatrix[user_to_test].nonzero()[1] 
+    if len(relevant_items) > 0:
+        recommended_items = evaluator.recommend(user_id = user_to_test,
+                                                exclude_seen=True)
+        prec = precision(recommended_items, relevant_items, at=k)
+        rec = recall(recommended_items, relevant_items, at=k)
+        return (prec, rec)
+    return (np.nan, np.nan)
+
 
 import multiprocessing
 pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
@@ -74,16 +87,4 @@ res = np.array(res)
 print(res)
 
 print("The precision and recall are: {}".format(np.nanmean(res, axis=0)))
-
-
-##Helper function to do a single user
-def _do_user(user_to_test):
-    relevant_items = evaluation_URMmatrix[user_to_test].nonzero()[1] 
-    if len(relevant_items) > 0:
-        recommended_items = model_slim.recommend(user_id = user_to_test,
-                                                exclude_seen=True)
-        prec = precision(recommended_items, relevant_items, at=k)
-        rec = recall(recommended_items, relevant_items, at=k)
-        return (prec, rec)
-    return (np.nan, np.nan)
 

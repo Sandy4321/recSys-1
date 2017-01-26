@@ -2,11 +2,11 @@ import numpy as np
 import scipy.sparse as sps
 from sklearn.linear_model import ElasticNet
 from base import Recommender,check_matrix
+from recSysLib.data_utils import load_sparse_mat, store_sparse_mat
 import random
 import pickle
 
-SAMPLED_CSC = "../../datasources/matrices/sampled.pkl"
-RESIDUAL_CSC = "../../datasources/matrices/residual.pkl"
+WEIGHT_SLIM = '../../datasources/slim/slimW_0.1_10.npz'
 
 # extends the abstract class Recommender, it is contained in the file base.py
 class Slim(Recommender):
@@ -23,6 +23,7 @@ class Slim(Recommender):
     # Initialization of the slim class
     def __init__(self, X, l1_penalty=0.1, l2_penalty=0.1, positive_only=True):
         # According to the paper ElasticNet notatoin: l1_penalty = a ; l2_penalty = b.
+        print("Slim __init__")
         super(Slim, self).__init__()
         self.l1_penalty = l1_penalty # penalty associated with the norm-1
         self.l2_penalty = l2_penalty # penalty associated with the norm-2
@@ -34,12 +35,14 @@ class Slim(Recommender):
 
     # Equivalent to the toString method.
     def __str__(self):
+        print("Slim toString")
         return "SLIM (l1_penalty={},l2_penalty={},positive_only={})".format(
             self.l1_penalty, self.l2_penalty, self.positive_only
         )
 
     # Fit method, it computes the weight matrix by solving the "optimization problem"
     def _compute_weight_matrix(self, X, verbose = 0):
+        print("Slim _compute_weight_matrix")
         self.dataset = X
 
         # Conversion to a csc format [ csc = sparse matrix factorized by columns]
@@ -49,59 +52,68 @@ class Slim(Recommender):
         if verbose > 0:
             print("matrix shape {}".format(X.shape))
             print("Definition of ElasticNet")
-
-        # initialize the ElasticNet model to solve the optimization problem
-        self.model = ElasticNet(alpha=1.0,
+        
+        
+        try:
+            self.W_sparse = load_sparse_mat(WEIGHT_SLIM)
+            print("Load SLIM weight matrix")
+        except:
+            # initialize the ElasticNet model to solve the optimization problem
+            self.model = ElasticNet(alpha=1.0,
                                 l1_ratio=self.l1_ratio,
                                 positive=self.positive_only,
                                 fit_intercept=False,
                                 copy_X=False)
 
-        # we'll store the W matrix into a sparse csc_matrix, thanks to the independence condition between columns
-        # let's initialize the vectors used by the sparse.csc_matrix constructor
-        values, rows, cols = [], [], []
+            # we'll store the W matrix into a sparse csc_matrix, thanks to the independence condition between columns
+            # let's initialize the vectors used by the sparse.csc_matrix constructor
+            values, rows, cols = [], [], []
 
-        # fit each item's factors sequentially (not in parallel)
-        for j in range(n_items):
-            if verbose > 0:
-                print("Iteration {} over {}".format(j,n_items))
+            # fit each item's factors sequentially (not in parallel)
+            for j in range(n_items):
+                if verbose > 0:
+                    print("Iteration {} over {}".format(j,n_items))
 
-            # get the target column corresponded to the item j
-            y = X[:, j].toarray()
+                # get the target column corresponded to the item j
+                y = X[:, j].toarray()
 
-            # set the j-th column of X to zero
-            startptr = X.indptr[j]  # index pointer array of the matrix
-            endptr = X.indptr[j + 1]
-            # sparse values written in the column j
-            bak = X.data[startptr: endptr].copy()
-            X.data[startptr: endptr] = 0.0
-            # fit one ElasticNet model per column
-            self.model.fit(X, y)
+                # set the j-th column of X to zero
+                startptr = X.indptr[j]  # index pointer array of the matrix
+                endptr = X.indptr[j + 1]
+                # sparse values written in the column j
+                bak = X.data[startptr: endptr].copy()
+                X.data[startptr: endptr] = 0.0
+                # fit one ElasticNet model per column
+                self.model.fit(X, y)
 
-            # self.model.coef_ contains the coefficient of the ElasticNet model
-            # let's keep only the non-zero values
-            # Massimo version
+                # self.model.coef_ contains the coefficient of the ElasticNet model
+                # let's keep only the non-zero values
+                # Massimo version
 
-            nnz_idx = self.model.coef_ > 0.0
+                nnz_idx = self.model.coef_ > 0.0
 
-            values.extend(self.model.coef_[nnz_idx])
-            rows.extend(np.arange(n_items)[nnz_idx])
-            cols.extend(np.ones(nnz_idx.sum()) * j)
+                values.extend(self.model.coef_[nnz_idx])
+                rows.extend(np.arange(n_items)[nnz_idx])
+                cols.extend(np.ones(nnz_idx.sum()) * j)
 
-            # finally, replace the original values of the j-th column
-            X.data[startptr:endptr] = bak
+                # finally, replace the original values of the j-th column
+                X.data[startptr:endptr] = bak
 
-        # generate the sparse weight matrix
-        self.W_sparse = sps.csc_matrix((values, (rows, cols)), shape=(n_items, n_items), dtype=np.float32)
+            # generate the sparse weight matrix
+            self.W_sparse = sps.csc_matrix((values, (rows, cols)), shape=(n_items, n_items), dtype=np.float32)
+            store_sparse_mat(self.W_sparse, WEIGHT_SLIM)
+
 
     def get_weight_matrix(self):
         """
         Simple getter
         :return: get the weight matrix as a compressed sparse column matrix
         """
+        print("Slim get_weight_matrix")
         return self.W_sparse
 
     def recommend(self, user_id, n=None, exclude_seen=True):
+        print("Slim recommend")
         # compute the scores using the dot product
         user_profile = self._get_user_ratings(user_id)
         scores = user_profile.dot(self.W_sparse).toarray().ravel()
@@ -112,93 +124,42 @@ class Slim(Recommender):
         return ranking[:n]
 
     def predict_rates(self, user_id, exclude_seen=True, verbose = 0):
+        print("Slim predict_rates")
         user_profile = self._get_user_ratings(user_id)
         scores = user_profile.dot(self.W_sparse).toarray().ravel()
         if verbose > 0:
             print(scores)
 
     def set_weight_matrix(self, W):
+        print("Slim set weight")
         self.W_sparse = W
 
     def set_urm_matrix(self, X):
+        print("Slim set urm")
         self.dataset = X
-
-    def get_sampled_csc(self):
-        return self.sampled_csc
-
-    def get_residual_csc(self):
-        return self.residual_csc
-
-    def decompose_urm_matrix(self, k, verbose = 0):
-        #try to load the matrices, otherwise compute and store them
-        try:
-            with open(SAMPLED_CSC, 'rb') as infile:
-                self.sampled_csc = pickle.load(infile)
-            with open(RESIDUAL_CSC, 'rb') as infile:
-                self.residual_csc = pickle.load(infile)
-            print("Loaded sampled and residual matrices")
-        except:
-            self.original_dataset = self.dataset
-            iteration = 0
-            list_users = np.unique(self.dataset.nonzero()[0])
-            csc_residual_dataset = sps.lil_matrix(self.dataset.shape)
-            csc_sampled_dataset = sps.lil_matrix(self.dataset.shape)
-            len_test = len(list_users)
-            for u in list_users:
-                iteration += 1
-                user_profile = self.dataset[u,:]
-                if verbose > 0 and iteration%500 == 0:
-                    print("\nIteration {} over {}".format(iteration, len_test))
-                    #print("Profile:",user_profile)
-                rated_items = list(user_profile.nonzero()[1])
-                if len(rated_items) > k:
-                    sampled_items = random.sample(rated_items,k)
-                    residual_items = list(set(rated_items) - set(sampled_items))
-                    if verbose > 1:
-                        print("All items",rated_items)
-                        print("Sampled items type: {}, {}".format(type(sampled_items),sampled_items))
-                        print("Residual items ",residual_items)
-                    for i in residual_items:
-                        csc_residual_dataset[u,i] = user_profile[0,i]
-
-                    for i in sampled_items:
-                        csc_sampled_dataset[u,i] = user_profile[0,i]
-                        #print(csc_sampled_dataset[u,i])
-                    #print("Sampled type:{}, {}".format(type(sampled_items), sampled_items))
-            if verbose > 0:
-                print("CSC sampled:\n",csc_sampled_dataset)
-                print("CSC residual:\n",csc_residual_dataset)
-            self.sampled_csc = csc_sampled_dataset
-            self.residual_csc = csc_residual_dataset
-
-            #and store them
-            with open(SAMPLED_CSC, 'wb') as outfile:
-                pickle.dump(self.sampled_csc, outfile, pickle.HIGHEST_PROTOCOL)
-            with open(RESIDUAL_CSC, 'wb') as outfile:
-                pickle.dump(self.residual_csc, outfile, pickle.HIGHEST_PROTOCOL)
-            print("Saved sampled and residual matrices")
-            print("Saved sampled and residual matrices")
-
-from multiprocessing import Pool
-from functools import partial
 
 class MultiThreadSLIM(Slim):
         def __init__(self,
+                     X,
                      l1_penalty=0.1,
                      l2_penalty=0.1,
                      positive_only=True,
                      workers=4):
-            super(MultiThreadSLIM, self).__init__(l1_penalty=l1_penalty,
+            print("MultiSLim init")
+            super(MultiThreadSLIM, self).__init__(X,
+                                                  l1_penalty=l1_penalty,
                                                   l2_penalty=l2_penalty,
                                                   positive_only=positive_only)
             self.workers = workers
 
         def __str__(self):
+            print("MultiSlim toString")
             return "SLIM_mt (l1_penalty={},l2_penalty={},positive_only={},workers={})".format(
                 self.l1_penalty, self.l2_penalty, self.positive_only, self.workers
             )
 
-        def _partial_fit(self, j, X):
+        def _partial_w_computation(self, j, X):
+            print("MultiSlim partial fit")
             model = ElasticNet(alpha=1.0,
                                l1_ratio=self.l1_ratio,
                                positive=self.positive_only,
@@ -221,12 +182,13 @@ class MultiThreadSLIM(Slim):
             cols = np.ones(nnz_idx.sum()) * j
             return values, rows, cols
 
-        def fit(self, X):
+        def _compute_weigt_matrix(self, X):
+            print("MultiSlim fit")
             self.dataset = X
             X = check_matrix(X, 'csc', dtype=np.float32)
             n_items = X.shape[1]
             # fit item's factors in parallel
-            _pfit = partial(self._partial_fit, X=X)
+            _pfit = partial(self._partial_w_computation, X=X)
             pool = Pool(processes=self.workers)
             res = pool.map(_pfit, np.arange(n_items))
 
