@@ -27,20 +27,20 @@ L2_LAMBDA = 0.00001000
 NUM_EPOCHS = 100
 BATCH_SIZE = 20000
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.01  # percentage of null similarities to add
+RND_NULL_SIM = 0.20  # percentage of null similarities to add
 
-MIN_SIMILARITY = 1e-4
+MIN_SIMILARITY = 1e-5
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train.pkl"
-AB_FILE_X_VAL = BASE_FILE + "X_val.pkl"
-AB_FILE_Y_TRAIN = BASE_FILE + "Y_train.npy"
-AB_FILE_Y_VAL = BASE_FILE + "Y_val.npy"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train_20.pkl"
+AB_FILE_X_VAL = BASE_FILE + "X_val_20.pkl"
+AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_20.npy"
+AB_FILE_Y_VAL = BASE_FILE + "Y_val_20.npy"
 FILE = BASE_FILE + "ab_model.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_20.npz"
 
 
 class abPredictor:
@@ -74,9 +74,9 @@ class abPredictor:
         print("Loading data")
         try:
             with open(AB_FILE_X_TRAIN, 'rb') as infile:
-                self._X_train = pickle.load(infile).astype(np.float32)
+                self._X_train = pickle.load(infile)
             with open(AB_FILE_X_VAL, 'rb') as infile:
-                self._X_val = pickle.load(infile).astype(np.float32)
+                self._X_val = pickle.load(infile)
             self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
             self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
@@ -84,9 +84,9 @@ class abPredictor:
             print("Data not found. Creating dataset")
             self._create_dataset()
             with open(AB_FILE_X_TRAIN, 'rb') as infile:
-                self._X_train = pickle.load(infile).astype(np.float32)
+                self._X_train = pickle.load(infile)
             with open(AB_FILE_X_VAL, 'rb') as infile:
-                self._X_val = pickle.load(infile).astype(np.float32)
+                self._X_val = pickle.load(infile)
             self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
             self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
@@ -94,9 +94,9 @@ class abPredictor:
 
    ###PRINT FIMENSION OF DATA VECTORS###
     def _print_data_dim(self):
-        print("X Train: " + str(self._X_train.shape))
+        print("X Train: " + str(len(self._X_train)))
         print("y Train: " + str(self._y_train.shape))
-        print("X Validation: " + str(self._X_val.shape))
+        print("X Validation: " + str(len(self._X_val)))
         print("y Validation: " + str(self._y_val.shape))
 
 
@@ -290,7 +290,7 @@ class abPredictor:
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = s(i1,i2).toarray().flatten()
+            x = s(i1,i2).astype(np.float32)
             y = weight_matrix[i1,i2]
 
             Xs.append(x)
@@ -309,19 +309,19 @@ class abPredictor:
                 if weight_matrix[i2,i1] != 0:
                     continue
                 if random.random() < RND_NULL_SIM:
-                    x = s(i1,i2).toarray().flatten()
+                    x = s(i1,i2).astype(np.float32)
                     y = 0.0
                     Xs.append(x)
-                    ys.append(y)
+                    ys.append([y])
 
 
         #take out some samples for validation
         X_train, X_val, y_train, y_val= train_test_split(Xs, ys, test_size=VAL_PERCENTAGE, random_state=1)
 
         with open(AB_FILE_X_TRAIN, 'wb') as outfile:
-            pickle.dump(scipy.sparse.csc_matrix(X_train, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(X_train, outfile, pickle.HIGHEST_PROTOCOL)
         with open(AB_FILE_X_VAL, 'wb') as outfile:
-            pickle.dump(scipy.sparse.csc_matrix(X_val, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(X_val, outfile, pickle.HIGHEST_PROTOCOL)
         np.save(AB_FILE_Y_TRAIN, np.array(y_train))
         np.save(AB_FILE_Y_VAL, np.array(y_val))
 
