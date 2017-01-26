@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
 from sklearn.linear_model import ElasticNet
-from .base import Recommender,check_matrix
+from base import Recommender,check_matrix
 import random
 import pickle
 
@@ -21,13 +21,16 @@ class Slim(Recommender):
     """
 
     # Initialization of the slim class
-    def __init__(self, l1_penalty=0.1, l2_penalty=0.1, positive_only=True):
+    def __init__(self, X, l1_penalty=0.1, l2_penalty=0.1, positive_only=True):
         # According to the paper ElasticNet notatoin: l1_penalty = a ; l2_penalty = b.
         super(Slim, self).__init__()
         self.l1_penalty = l1_penalty # penalty associated with the norm-1
         self.l2_penalty = l2_penalty # penalty associated with the norm-2
         self.positive_only = positive_only # constraint about restriction to only positive weights
         self.l1_ratio = self.l1_penalty / (self.l1_penalty + self.l2_penalty)
+
+        #Compute weight similarity matrix
+        self._compute_weight_matrix(X)
 
     # Equivalent to the toString method.
     def __str__(self):
@@ -36,7 +39,7 @@ class Slim(Recommender):
         )
 
     # Fit method, it computes the weight matrix by solving the "optimization problem"
-    def fit(self, X, verbose = 0):
+    def _compute_weight_matrix(self, X, verbose = 0):
         self.dataset = X
 
         # Conversion to a csc format [ csc = sparse matrix factorized by columns]
