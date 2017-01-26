@@ -22,10 +22,10 @@ if USE_ENTIRE_FEATURES:
 
 GAUSSIAN_NOISE_SIGMA = 0.
 LEARNING_RATE = 0.00000500
-L2_LAMBDA = 0.00001000
+L2_LAMBDA = 0.
 
-NUM_EPOCHS = 100
-BATCH_SIZE = 20000
+NUM_EPOCHS = 10
+BATCH_SIZE = 100000
 VAL_PERCENTAGE = 0.1
 RND_NULL_SIM = 0.20  # percentage of null similarities to add
 
@@ -38,7 +38,7 @@ AB_FILE_X_TRAIN = BASE_FILE + "X_train_20.pkl"
 AB_FILE_X_VAL = BASE_FILE + "X_val_20.pkl"
 AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_20.npy"
 AB_FILE_Y_VAL = BASE_FILE + "Y_val_20.npy"
-FILE = BASE_FILE + "ab_model.npz"
+FILE = BASE_FILE + "ab_model_20.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
 COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_20.npz"
 
@@ -231,10 +231,10 @@ class abPredictor:
 
 
         print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain - l2\tVal - l2")
-        for i in range(0,11):
-            #self._lr.set_value(10**i)#np.float32(random.uniform(0.001, 0.0001)))
+        for i in range(-8,0):
+            self._lr.set_value(10**i)#np.float32(random.uniform(0.001, 0.0001)))
             #self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
-            self._sigma.set_value(i/10)#np.float32(random.uniform(0.,0.05)))
+            #self._sigma.set_value(i/10)#np.float32(random.uniform(0.,0.05)))
 
             network, train_loss, val_loss, t_l2, v_l2 = self._train_network(network, self._train_fn, self._val_fn,
                                                            X_train, y_train, X_val, y_val,
@@ -358,8 +358,8 @@ class abPredictor:
 
 if __name__ == '__main__':
     a = abPredictor()
-    #a.explore_hyperparameters()
+    a.explore_hyperparameters()
     #a.fit_network()
 
-    b = a._compute_sim_matrix()
-    joblib.dump(b, COMPUTED_SIM_MATRIX)
+    #b = a._compute_sim_matrix()
+    #joblib.dump(b, COMPUTED_SIM_MATRIX)
