@@ -25,22 +25,22 @@ LEARNING_RATE = 0.00000500
 L2_LAMBDA = 0.
 
 NUM_EPOCHS = 10
-BATCH_SIZE = 40
+BATCH_SIZE = 40000
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.03  # percentage of null similarities to add
+RND_NULL_SIM = 0.5  # percentage of null similarities to add
 
 MIN_SIMILARITY = 1e-5
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train_03.pkl"
-AB_FILE_X_VAL = BASE_FILE + "X_val_03.pkl"
-AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_03.npy"
-AB_FILE_Y_VAL = BASE_FILE + "Y_val_03.npy"
-FILE = BASE_FILE + "ab_model_03.npz"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train_50.pkl"
+AB_FILE_X_VAL = BASE_FILE + "X_val_50.pkl"
+AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_50.npy"
+AB_FILE_Y_VAL = BASE_FILE + "Y_val_50.npy"
+FILE = BASE_FILE + "ab_model_50.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_03.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_50.npz"
 
 
 class abPredictor:
@@ -204,8 +204,7 @@ class abPredictor:
             sleep(2)
             print("FUCK IT, I'M GIVING UP")
             sleep(2)
-            print("LET'S KILL THIS PROCESS, I JUST WISH I WERE ABLE TO KILL
-                  YOU")
+            print("LET'S KILL THIS PROCESS, I JUST WISH I WERE ABLE TO KILL YOU")
             sleep(2)
             exit(-1)
 
@@ -381,8 +380,8 @@ class abPredictor:
 
 if __name__ == '__main__':
     a = abPredictor()
-    #a.explore_hyperparameters()
+    a.explore_hyperparameters()
     #a.fit_network()
 
-    b = a._compute_sim_matrix()
-    joblib.dump(b, COMPUTED_SIM_MATRIX)
+    #b = a._compute_sim_matrix()
+    #joblib.dump(b, COMPUTED_SIM_MATRIX)
