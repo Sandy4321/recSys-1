@@ -25,22 +25,22 @@ LEARNING_RATE = 0.00000500
 L2_LAMBDA = 0.
 
 NUM_EPOCHS = 10
-BATCH_SIZE = 40000
+BATCH_SIZE = 300000
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.5  # percentage of null similarities to add
+RND_NULL_SIM = 0.10  # percentage of null similarities to add
 
 MIN_SIMILARITY = 1e-5
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train_50.pkl"
-AB_FILE_X_VAL = BASE_FILE + "X_val_50.pkl"
-AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_50.npy"
-AB_FILE_Y_VAL = BASE_FILE + "Y_val_50.npy"
-FILE = BASE_FILE + "ab_model_50.npz"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train_10.pkl"
+AB_FILE_X_VAL = BASE_FILE + "X_val_10.pkl"
+AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_10.npy"
+AB_FILE_Y_VAL = BASE_FILE + "Y_val_10.npy"
+FILE = BASE_FILE + "ab_model_10.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_50.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_10.npz"
 
 
 class abPredictor:
@@ -364,12 +364,12 @@ class abPredictor:
                     continue
                 products = rdr._similarity_features(movieId1,
                                                     movieId2).toarray().flatten().astype(np.float32)
-                similarity = self._predict_fn([products])
-                if similarity >= MIN_SIMILARITY:
+                similarity = self._predict_fn([products])[0][0]
+                if abs(similarity) >= MIN_SIMILARITY:
                     matrix[movieId1, movieId2] = similarity
                     matrix[movieId2, movieId1] = similarity
 
-        return scipy.sparse.csc_matrix(matrix)
+        return matrix
 
 
     ###GET THE SIMILARITY MATRIX COMPUTED BY THE NETWORK###
@@ -380,7 +380,7 @@ class abPredictor:
 
 if __name__ == '__main__':
     a = abPredictor()
-    a.explore_hyperparameters()
+    #a.explore_hyperparameters()
     #a.fit_network()
 
     #b = a._compute_sim_matrix()
