@@ -25,22 +25,22 @@ LEARNING_RATE = 0.00000500
 L2_LAMBDA = 0.
 
 NUM_EPOCHS = 10
-BATCH_SIZE = 100000
+BATCH_SIZE = 40
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.20  # percentage of null similarities to add
+RND_NULL_SIM = 0.5  # percentage of null similarities to add
 
 MIN_SIMILARITY = 1e-5
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train_20.pkl"
-AB_FILE_X_VAL = BASE_FILE + "X_val_20.pkl"
-AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_20.npy"
-AB_FILE_Y_VAL = BASE_FILE + "Y_val_20.npy"
-FILE = BASE_FILE + "ab_model_20.npz"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train_50.pkl"
+AB_FILE_X_VAL = BASE_FILE + "X_val_50.pkl"
+AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_50.npy"
+AB_FILE_Y_VAL = BASE_FILE + "Y_val_50.npy"
+FILE = BASE_FILE + "ab_model_50.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_20.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_50.npz"
 
 
 class abPredictor:
@@ -80,6 +80,7 @@ class abPredictor:
             self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
             self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
+
         except:
             print("Data not found. Creating dataset")
             self._create_dataset()
@@ -125,10 +126,11 @@ class abPredictor:
 
 
     ###COMPILE LEARNNG FUNCTIONS###
-    def _create_learning_functions(self, network, input_var, target_var, lr, l2_lambda):
+    def _create_learning_functions(self, network, input_var, t_var, lr, l2_lambda):
         params = lasagne.layers.get_all_params(network, trainable=True)
 
-        out = lasagne.layers.get_output(network)
+        out = lasagne.layers.get_output(network)*10000
+        target_var = t_var*10000
         test_out = lasagne.layers.get_output(network, deterministic=True)
 
         loss = lasagne.objectives.squared_error(out, target_var)
@@ -155,9 +157,10 @@ class abPredictor:
             # In each epoch, we do a full pass over the training data:
             start_time = time.time()
             train_err = train_err_l2 = train_batches = 0
-            for batch in self._iterate_minibatches(X_train, y_train, BATCH_SIZE, shuffle= True):
+            for batch in self._iterate_minibatches(X_train, y_train,
+                                                   BATCH_SIZE, shuffle= False):
                 inputs, targets = batch
-                e,e2 = train_fn(inputs.toarray().astype(np.float32), targets)
+                e,e2 = train_fn(self._from_list_of_sparse_to_matrix(inputs), targets)
                 train_err += e
                 train_err_l2 += e2
                 train_batches += 1
@@ -168,7 +171,7 @@ class abPredictor:
             val_err = val_err_l2 = val_batches = 0
             for batch in self._iterate_minibatches(X_val, y_val, BATCH_SIZE, shuffle = False):
                 inputs, targets = batch
-                e,e2 = val_fn(inputs.toarray().astype(np.float32), targets)
+                e,e2 = val_fn(self._from_list_of_sparse_to_matrix(inputs), targets)
                 val_err += e
                 val_err_l2 += e2
                 val_batches += 1
@@ -191,20 +194,27 @@ class abPredictor:
         return network, train_err, val_err, train_err_l2, val_err_l2
 
 
-
-    def _iterate_minibatches(self, i, t, batchsize, shuffle=False):
+    #WARNING: DO NOT FUCKING TRY TO USE SHUFFLE AS IT FUCKING CRASHES EVERYTHING
+    def _iterate_minibatches(self, indices, targets, batchsize, shuffle=False):
         if shuffle:
-            indices = np.arange(i.shape[0])
+            indices = np.arange(len(indices))
             np.random.shuffle(indices)
 
-        for start_idx in range(0, i.shape[0] - batchsize + 1, batchsize):
+        for start_idx in range(0, len(indices) - batchsize + 1, batchsize):
             if shuffle:
                 excerpt = indices[start_idx:start_idx + batchsize]
             else:
                 excerpt = slice(start_idx, start_idx + batchsize)
-            yield i[excerpt], t[excerpt]
+            yield indices[excerpt], targets[excerpt]
 
 
+    def _from_list_of_sparse_to_matrix(self, list_sparse):
+        matrix = np.zeros((BATCH_SIZE, NUM_FEATURES), dtype=np.float32)
+        for (idx,sparse) in enumerate(list_sparse):
+            array = sparse.toarray()[0]
+            matrix[idx] = array
+
+        return matrix
 
     ###EXPLORE HYPERPARAMETERS###
     def explore_hyperparameters(self):
@@ -221,7 +231,7 @@ class abPredictor:
         val_err = val_err_l2 = val_batches = 0
         for batch in self._iterate_minibatches(X_val, y_val, BATCH_SIZE, shuffle = False):
             inputs, targets = batch
-            e,e2 = self._val_fn(inputs.toarray().astype(np.float32), targets)
+            e,e2 = self._val_fn(self._from_list_of_sparse_to_matrix(inputs), targets)
             val_err += e
             val_err_l2 += e2
             val_batches += 1
@@ -232,7 +242,7 @@ class abPredictor:
 
         print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain - l2\tVal - l2")
         for i in range(-8,0):
-            self._lr.set_value(10**i)#np.float32(random.uniform(0.001, 0.0001)))
+            self._lr.set_value(np.float32(10**i))#np.float32(random.uniform(0.001, 0.0001)))
             #self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
             #self._sigma.set_value(i/10)#np.float32(random.uniform(0.,0.05)))
 
@@ -290,11 +300,11 @@ class abPredictor:
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = s(i1,i2).astype(np.float32)
+            x = s(i1,i2)
             y = weight_matrix[i1,i2]
 
             Xs.append(x)
-            ys.append([y])
+            ys.append(y)
 
             counter +=1
             if (counter % 10000 == 0):
@@ -309,14 +319,15 @@ class abPredictor:
                 if weight_matrix[i2,i1] != 0:
                     continue
                 if random.random() < RND_NULL_SIM:
-                    x = s(i1,i2).astype(np.float32)
+                    x = s(i1,i2)
                     y = 0.0
                     Xs.append(x)
-                    ys.append([y])
+                    ys.append(y)
 
 
         #take out some samples for validation
         X_train, X_val, y_train, y_val= train_test_split(Xs, ys, test_size=VAL_PERCENTAGE, random_state=1)
+
 
         with open(AB_FILE_X_TRAIN, 'wb') as outfile:
             pickle.dump(X_train, outfile, pickle.HIGHEST_PROTOCOL)
