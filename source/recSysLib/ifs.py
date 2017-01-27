@@ -18,6 +18,8 @@ from sklearn.model_selection import cross_val_score, check_cv, cross_val_predict
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import ExtraTreesRegressor
 
+import pickle
+
 BASELINE = "../../datasources/ab_2/"
 
 class IFS(BaseEstimator, MetaEstimatorMixin, SelectorMixin):
@@ -399,7 +401,18 @@ class IFS(BaseEstimator, MetaEstimatorMixin, SelectorMixin):
 
 def __main__():
     print("SFS Init")
-    estimator = ExtraTreesRegressor(n_estimators=100), cv=10)
-    
+    # Definition of the SFS model
+    estimator = ExtraTreesRegressor(n_estimators=100)
+    feature_selection = IFS(estimator= estimator, cv = 10, verbose = 1)
+
+    # Data preparation
+    with open(BASELINE + 'X_val_01.pkl', 'rb') as infile:
+        X_all_features = pickle.load(infile)
+    Y_target = np.load(BASELINE + 'Y_val_01.npy')
+
+    print("Types, X: {}, Y: {}".format(type(X_all_features), type(Y_target)))
+
+    # IFS call 
+    feature_selection.fit(X_all_features, Y_target)
 
 __main__()
