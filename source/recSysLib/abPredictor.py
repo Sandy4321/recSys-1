@@ -25,22 +25,22 @@ LEARNING_RATE = 0.00000500
 L2_LAMBDA = 0.
 
 NUM_EPOCHS = 10
-BATCH_SIZE = 10
+BATCH_SIZE = 40
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.03  # percentage of null similarities to add
+RND_NULL_SIM = 0.5  # percentage of null similarities to add
 
 MIN_SIMILARITY = 1e-5
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train_03.pkl"
-AB_FILE_X_VAL = BASE_FILE + "X_val_03.pkl"
-AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_03.npy"
-AB_FILE_Y_VAL = BASE_FILE + "Y_val_03.npy"
-FILE = BASE_FILE + "ab_model_03.npz"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train_50.pkl"
+AB_FILE_X_VAL = BASE_FILE + "X_val_50.pkl"
+AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_50.npy"
+AB_FILE_Y_VAL = BASE_FILE + "Y_val_50.npy"
+FILE = BASE_FILE + "ab_model_50.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_03.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_50.npz"
 
 
 class abPredictor:
@@ -74,19 +74,20 @@ class abPredictor:
         print("Loading data")
         try:
             with open(AB_FILE_X_TRAIN, 'rb') as infile:
-                self._X_train = pickle.load(infile).astype(np.float32)
+                self._X_train = pickle.load(infile)
             with open(AB_FILE_X_VAL, 'rb') as infile:
-                self._X_val = pickle.load(infile).astype(np.float32)
+                self._X_val = pickle.load(infile)
             self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
             self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
+
         except:
             print("Data not found. Creating dataset")
             self._create_dataset()
             with open(AB_FILE_X_TRAIN, 'rb') as infile:
-                self._X_train = pickle.load(infile).astype(np.float32)
+                self._X_train = pickle.load(infile)
             with open(AB_FILE_X_VAL, 'rb') as infile:
-                self._X_val = pickle.load(infile).astype(np.float32)
+                self._X_val = pickle.load(infile)
             self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
             self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
@@ -94,9 +95,9 @@ class abPredictor:
 
    ###PRINT FIMENSION OF DATA VECTORS###
     def _print_data_dim(self):
-        print("X Train: " + str(self._X_train.shape))
+        print("X Train: " + str(len(self._X_train)))
         print("y Train: " + str(self._y_train.shape))
-        print("X Validation: " + str(self._X_val.shape))
+        print("X Validation: " + str(len(self._X_val)))
         print("y Validation: " + str(self._y_val.shape))
 
 
@@ -156,9 +157,10 @@ class abPredictor:
             # In each epoch, we do a full pass over the training data:
             start_time = time.time()
             train_err = train_err_l2 = train_batches = 0
-            for batch in self._iterate_minibatches(X_train, y_train, BATCH_SIZE, shuffle= True):
+            for batch in self._iterate_minibatches(X_train, y_train,
+                                                   BATCH_SIZE, shuffle= False):
                 inputs, targets = batch
-                e,e2 = train_fn(inputs.toarray().astype(np.float32), targets)
+                e,e2 = train_fn(self._from_list_of_sparse_to_matrix(inputs), targets)
                 train_err += e
                 train_err_l2 += e2
                 train_batches += 1
@@ -169,7 +171,7 @@ class abPredictor:
             val_err = val_err_l2 = val_batches = 0
             for batch in self._iterate_minibatches(X_val, y_val, BATCH_SIZE, shuffle = False):
                 inputs, targets = batch
-                e,e2 = val_fn(inputs.toarray().astype(np.float32), targets)
+                e,e2 = val_fn(self._from_list_of_sparse_to_matrix(inputs), targets)
                 val_err += e
                 val_err_l2 += e2
                 val_batches += 1
@@ -192,20 +194,27 @@ class abPredictor:
         return network, train_err, val_err, train_err_l2, val_err_l2
 
 
-
-    def _iterate_minibatches(self, i, t, batchsize, shuffle=False):
+    #WARNING: DO NOT FUCKING TRY TO USE SHUFFLE AS IT FUCKING CRASHES EVERYTHING
+    def _iterate_minibatches(self, indices, targets, batchsize, shuffle=False):
         if shuffle:
-            indices = np.arange(i.shape[0])
+            indices = np.arange(len(indices))
             np.random.shuffle(indices)
 
-        for start_idx in range(0, i.shape[0] - batchsize + 1, batchsize):
+        for start_idx in range(0, len(indices) - batchsize + 1, batchsize):
             if shuffle:
                 excerpt = indices[start_idx:start_idx + batchsize]
             else:
                 excerpt = slice(start_idx, start_idx + batchsize)
-            yield i[excerpt], t[excerpt]
+            yield indices[excerpt], targets[excerpt]
 
 
+    def _from_list_of_sparse_to_matrix(self, list_sparse):
+        matrix = np.zeros((BATCH_SIZE, NUM_FEATURES), dtype=np.float32)
+        for (idx,sparse) in enumerate(list_sparse):
+            array = sparse.toarray()[0]
+            matrix[idx] = array
+
+        return matrix
 
     ###EXPLORE HYPERPARAMETERS###
     def explore_hyperparameters(self):
@@ -222,7 +231,7 @@ class abPredictor:
         val_err = val_err_l2 = val_batches = 0
         for batch in self._iterate_minibatches(X_val, y_val, BATCH_SIZE, shuffle = False):
             inputs, targets = batch
-            e,e2 = self._val_fn(inputs.toarray().astype(np.float32), targets)
+            e,e2 = self._val_fn(self._from_list_of_sparse_to_matrix(inputs), targets)
             val_err += e
             val_err_l2 += e2
             val_batches += 1
@@ -291,7 +300,7 @@ class abPredictor:
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = s(i1,i2).toarray().flatten()
+            x = s(i1,i2)
             y = weight_matrix[i1,i2]
 
             Xs.append(x)
@@ -310,7 +319,7 @@ class abPredictor:
                 if weight_matrix[i2,i1] != 0:
                     continue
                 if random.random() < RND_NULL_SIM:
-                    x = s(i1,i2).toarray().flatten()
+                    x = s(i1,i2)
                     y = 0.0
                     Xs.append(x)
                     ys.append(y)
@@ -319,10 +328,11 @@ class abPredictor:
         #take out some samples for validation
         X_train, X_val, y_train, y_val= train_test_split(Xs, ys, test_size=VAL_PERCENTAGE, random_state=1)
 
+
         with open(AB_FILE_X_TRAIN, 'wb') as outfile:
-            pickle.dump(scipy.sparse.csc_matrix(X_train, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(X_train, outfile, pickle.HIGHEST_PROTOCOL)
         with open(AB_FILE_X_VAL, 'wb') as outfile:
-            pickle.dump(scipy.sparse.csc_matrix(X_val, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(X_val, outfile, pickle.HIGHEST_PROTOCOL)
         np.save(AB_FILE_Y_TRAIN, np.array(y_train))
         np.save(AB_FILE_Y_VAL, np.array(y_val))
 
