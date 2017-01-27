@@ -25,22 +25,22 @@ LEARNING_RATE = 0.00000500
 L2_LAMBDA = 0.
 
 NUM_EPOCHS = 10
-BATCH_SIZE = 100000
+BATCH_SIZE = 10
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.20  # percentage of null similarities to add
+RND_NULL_SIM = 0.03  # percentage of null similarities to add
 
 MIN_SIMILARITY = 1e-5
 
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train_20.pkl"
-AB_FILE_X_VAL = BASE_FILE + "X_val_20.pkl"
-AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_20.npy"
-AB_FILE_Y_VAL = BASE_FILE + "Y_val_20.npy"
-FILE = BASE_FILE + "ab_model_20.npz"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train_03.pkl"
+AB_FILE_X_VAL = BASE_FILE + "X_val_03.pkl"
+AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_03.npy"
+AB_FILE_Y_VAL = BASE_FILE + "Y_val_03.npy"
+FILE = BASE_FILE + "ab_model_03.npz"
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_20.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_03.npz"
 
 
 class abPredictor:
@@ -74,9 +74,9 @@ class abPredictor:
         print("Loading data")
         try:
             with open(AB_FILE_X_TRAIN, 'rb') as infile:
-                self._X_train = pickle.load(infile)
+                self._X_train = pickle.load(infile).astype(np.float32)
             with open(AB_FILE_X_VAL, 'rb') as infile:
-                self._X_val = pickle.load(infile)
+                self._X_val = pickle.load(infile).astype(np.float32)
             self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
             self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
@@ -84,9 +84,9 @@ class abPredictor:
             print("Data not found. Creating dataset")
             self._create_dataset()
             with open(AB_FILE_X_TRAIN, 'rb') as infile:
-                self._X_train = pickle.load(infile)
+                self._X_train = pickle.load(infile).astype(np.float32)
             with open(AB_FILE_X_VAL, 'rb') as infile:
-                self._X_val = pickle.load(infile)
+                self._X_val = pickle.load(infile).astype(np.float32)
             self._y_train = np.load(AB_FILE_Y_TRAIN).flatten().astype(np.float32)
             self._y_val = np.load(AB_FILE_Y_VAL).flatten().astype(np.float32)
             self._print_data_dim()
@@ -94,9 +94,9 @@ class abPredictor:
 
    ###PRINT FIMENSION OF DATA VECTORS###
     def _print_data_dim(self):
-        print("X Train: " + str(len(self._X_train)))
+        print("X Train: " + str(self._X_train.shape))
         print("y Train: " + str(self._y_train.shape))
-        print("X Validation: " + str(len(self._X_val)))
+        print("X Validation: " + str(self._X_val.shape))
         print("y Validation: " + str(self._y_val.shape))
 
 
@@ -125,10 +125,11 @@ class abPredictor:
 
 
     ###COMPILE LEARNNG FUNCTIONS###
-    def _create_learning_functions(self, network, input_var, target_var, lr, l2_lambda):
+    def _create_learning_functions(self, network, input_var, t_var, lr, l2_lambda):
         params = lasagne.layers.get_all_params(network, trainable=True)
 
-        out = lasagne.layers.get_output(network)
+        out = lasagne.layers.get_output(network)*10000
+        target_var = t_var*10000
         test_out = lasagne.layers.get_output(network, deterministic=True)
 
         loss = lasagne.objectives.squared_error(out, target_var)
@@ -232,7 +233,7 @@ class abPredictor:
 
         print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain - l2\tVal - l2")
         for i in range(-8,0):
-            self._lr.set_value(10**i)#np.float32(random.uniform(0.001, 0.0001)))
+            self._lr.set_value(np.float32(10**i))#np.float32(random.uniform(0.001, 0.0001)))
             #self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
             #self._sigma.set_value(i/10)#np.float32(random.uniform(0.,0.05)))
 
@@ -290,11 +291,11 @@ class abPredictor:
             #which is equal to optimize for the mean of the two
             #TODO
             #WARNING USING _SIMILARITY INSTEAD OF _GET_SIMILARITY
-            x = s(i1,i2).astype(np.float32)
+            x = s(i1,i2).toarray().flatten()
             y = weight_matrix[i1,i2]
 
             Xs.append(x)
-            ys.append([y])
+            ys.append(y)
 
             counter +=1
             if (counter % 10000 == 0):
@@ -309,19 +310,19 @@ class abPredictor:
                 if weight_matrix[i2,i1] != 0:
                     continue
                 if random.random() < RND_NULL_SIM:
-                    x = s(i1,i2).astype(np.float32)
+                    x = s(i1,i2).toarray().flatten()
                     y = 0.0
                     Xs.append(x)
-                    ys.append([y])
+                    ys.append(y)
 
 
         #take out some samples for validation
         X_train, X_val, y_train, y_val= train_test_split(Xs, ys, test_size=VAL_PERCENTAGE, random_state=1)
 
         with open(AB_FILE_X_TRAIN, 'wb') as outfile:
-            pickle.dump(X_train, outfile, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(scipy.sparse.csc_matrix(X_train, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
         with open(AB_FILE_X_VAL, 'wb') as outfile:
-            pickle.dump(X_val, outfile, pickle.HIGHEST_PROTOCOL)
+            pickle.dump(scipy.sparse.csc_matrix(X_val, dtype=np.float32), outfile, pickle.HIGHEST_PROTOCOL)
         np.save(AB_FILE_Y_TRAIN, np.array(y_train))
         np.save(AB_FILE_Y_VAL, np.array(y_val))
 
