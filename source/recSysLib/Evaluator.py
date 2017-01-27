@@ -8,9 +8,7 @@ import pickle
 SAMPLED_CSC = "../../datasources/matrices/sampled"
 RESIDUAL_CSC = "../../datasources/matrices/residual"
 
-# extends the abstract class Recommender, it is contained in the file base.py
-
-class Evaluator():
+class Evaluator:
     def __init__(self, urm, w):
         self.dataset = urm
         self.W_sparse = w

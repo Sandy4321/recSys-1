@@ -35,19 +35,17 @@ class Simple_CBF(Recommender):
             print("ICM conversion to csc sparse matrix")
             print("ICM type: {}, shape: {}".format(type(X), X.shape))
 
-        item_indexes = np.unique(X.nonzero()[0])
-
+        n_items = X.shape[0]
+        item_indexes = [i for i in range(n_items-1,-1,-1)]
         if verbose > 0:
             print("Item Indexes {},\nlen: {}".format(item_indexes,
                                                      len(item_indexes)))
-
         try:
             with open(WEIGHT_CBF, 'rb') as in_file:
                 self._weight_matrix = pickle.load(in_file)
             print("Load CBF weight matrix")
         except:
             self._weight_matrix = sps.lil_matrix((len(item_indexes),len(item_indexes)), dtype=np.float32)
-            print(item_indexes)
             for i in item_indexes:
                 tmp_sentinel = True
                 if i%100==0 and tmp_sentinel:

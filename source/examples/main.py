@@ -25,7 +25,7 @@ k = 5 # Number of k-items to make the evaluation on
 l1 = 0.1
 l2 = 100000
 
-USAGE = "SLIM"
+USAGE = "CBF"
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
