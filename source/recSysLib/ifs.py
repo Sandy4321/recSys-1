@@ -22,6 +22,8 @@ import pickle
 
 BASELINE = "../../datasources/ab_2/"
 
+N_REDUCED_FEATURES = 4701
+
 class IFS(BaseEstimator, MetaEstimatorMixin, SelectorMixin):
     """Feature ranking with recursive feature elimination.
 
@@ -252,7 +254,7 @@ class IFS(BaseEstimator, MetaEstimatorMixin, SelectorMixin):
                     idx = n_features - i - 1
                     print('#{:6}\t{:6}\t{:6f}\t{}'.format(str(i), str(ranked_f[idx]), coefs[ranks[idx]], ranked_n[idx]))
 
-            if coefs[ranks][-1] < 1e-5:
+            if coefs[ranks][-1] < 1e-8:
                 if self.verbose > 0:
                     import warnings
                     warnings.warn('scores are too small to be used, please standardize inputs')
@@ -399,6 +401,13 @@ class IFS(BaseEstimator, MetaEstimatorMixin, SelectorMixin):
         else:
             self.features_names = np.arra(fs)
 
+def _from_list_of_sparse_to_matrix(list_sparse):
+    matrix = np.zeros((len(list_sparse), N_REDUCED_FEATURES), dtype=np.float32)
+    for (idx,sparse) in enumerate(list_sparse):
+        array = sparse.toarray()[0]
+        matrix[idx] = array
+    return matrix
+
 def __main__():
     print("SFS Init")
     # Definition of the SFS model
@@ -406,13 +415,15 @@ def __main__():
     feature_selection = IFS(estimator= estimator, cv = 10, verbose = 1)
 
     # Data preparation
-    with open(BASELINE + 'X_val_01.pkl', 'rb') as infile:
+    with open(BASELINE + 'X_train_10.pkl', 'rb') as infile:
         X_all_features = pickle.load(infile)
-    Y_target = np.load(BASELINE + 'Y_val_01.npy')
+    Y_target = np.load(BASELINE + 'Y_train_10.npy')
 
-    print("Types, X: {}, Y: {}".format(type(X_all_features), type(Y_target)))
+    print("Types, X: {}, Y: {}".format(type(_from_list_of_sparse_to_matrix(X_all_features)),type(Y_target)))
+    print("Shapes, X: {}, Y: {}".format(_from_list_of_sparse_to_matrix(X_all_features).shape, Y_target.shape))
+    #print("Shapes, X: {}, Y: {}".format(X_all_features.toarray().shape, Y_target.shape))
 
     # IFS call 
-    feature_selection.fit(X_all_features, Y_target)
+    feature_selection.fit(_from_list_of_sparse_to_matrix(X_all_features), np.ravel(Y_target))
 
 __main__()
