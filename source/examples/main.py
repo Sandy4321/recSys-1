@@ -67,6 +67,12 @@ evaluator.set_urm_matrix(evaluator.get_residual_csc())
 users_test = np.unique(test_URMmatrix.nonzero()[0])
 evaluation_URMmatrix = evaluator.get_sampled_csc()
 
+#cut weight matrix
+if weight_matrix.shape[0] > test_URMmatrix.shape[1]:
+    print("Cutting weight matrix to test items")
+    weight_matrix = weight_matrix[:test_URMmatrix.shape[1],
+                                  :test_URMmatrix.shape[1]]
+    evaluator.set_weight_matrix(weight_matrix)
 
 ##Helper function to do a single user
 def _do_user(user_to_test):
