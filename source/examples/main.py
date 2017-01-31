@@ -11,7 +11,7 @@ from recSysLib import abPredictor as abp
 from recSysLib.netflix_reader import NetflixReader
 from recSysLib.Evaluator import Evaluator
 import numpy as np
-
+import scipy
 
 # Run Parameters
 percentage_train_col = 0.75
@@ -26,6 +26,8 @@ l1 = 0.1
 l2 = 100000
 
 USAGE = "CBF"
+
+CBF_METRIC = "Cosine" 
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
@@ -49,7 +51,7 @@ print("Original: {} , train : {} , test: {} ".format(netflix_urm.shape, train_UR
 if USAGE == "SLIM":
     model = slim.MultiThreadSLIM(train_URMmatrix, l1_penalty=l1,l2_penalty=l2)
 elif USAGE == "CBF":
-    model = content.Simple_CBF(icm_reduced_matrix, 'Pearson')
+    model = content.Simple_CBF(icm_reduced_matrix, CBF_METRIC)
 elif USAGE == "ABP":
     model = abp.abPredictor()
 
@@ -57,6 +59,12 @@ elif USAGE == "ABP":
 #C) EVALUATION with HOLDOUT STAGE
 print("EVALUATION")
 weight_matrix = model.get_weight_matrix()
+#try to filter it
+if USAGE == "CBF":
+    weight_matrix = scipy.sparse.lil_matrix(weight_matrix)
+    weight_matrix[weight_matrix < 1e-4] = 0
+    weight_matrix = scipy.sparse.csc_matrix(weight_matrix)
+
 evaluator = Evaluator(test_URMmatrix, weight_matrix)
 
 # Compute residual and sampled matrices. (holdout for evaluation)

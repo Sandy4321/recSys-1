@@ -1,10 +1,11 @@
 import numpy as np
 import scipy.sparse as sps
 import scipy.stats as stats
+from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 from .base import Recommender,check_matrix
 
-WEIGHT_CBF = "../../datasources/matrices/cbf.pkl"
+WEIGHT_CBF = "../../datasources/matrices/cbf_cosine.pkl"
 MIN_SIM = 1e-5
 
 class Simple_CBF(Recommender):
@@ -37,7 +38,7 @@ class Simple_CBF(Recommender):
 
         n_items = X.shape[0]
         item_indexes = [i for i in range(n_items-1,-1,-1)]
-        if verbose > 0:
+        if verbose >1:
             print("Item Indexes {},\nlen: {}".format(item_indexes,
                                                      len(item_indexes)))
         try:
@@ -61,7 +62,11 @@ class Simple_CBF(Recommender):
                         c,_ = stats.pearsonr(X[i].toarray()[0], X[j].toarray()[0])
                         if verbose > 0:
                             print("item-1: {}\nitem-2:{}:sim{}".format(X[i].nonzero()[1],X[j].nonzero()[1], c))
-                        
+                    if self.metric == 'Cosine':
+                        if verbose > 0:
+                            print("item i: {}\nitem j:{}".format(X[i],X[j]))
+                            print("shapes: {}, {}".format(X[i].shape, X[j].shape))
+                        c = cosine_similarity(X[i], X[j])[0][0] 
                     if c > MIN_SIM:
                         self._weight_matrix[i,j] = c
                         self._weight_matrix[j,i] = c
