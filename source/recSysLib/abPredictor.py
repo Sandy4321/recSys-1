@@ -21,11 +21,11 @@ if USE_ENTIRE_FEATURES:
     NUM_FEATURES = 4701
 
 GAUSSIAN_NOISE_SIGMA = 0.
-LEARNING_RATE = 0.0005
+LEARNING_RATE = 0.00001
 L2_LAMBDA = 0.
 
-NUM_EPOCHS = 50
-BATCH_SIZE = 4096
+NUM_EPOCHS = 5
+BATCH_SIZE = 100
 VAL_PERCENTAGE = 0.1
 RND_NULL_SIM = 0.10  # percentage of null similarities to add
 
@@ -222,8 +222,8 @@ class abPredictor:
     def _from_list_of_sparse_to_matrix(self, list_sparse):
         matrix = np.zeros((BATCH_SIZE, NUM_FEATURES), dtype=np.float32)
         for (idx,sparse) in enumerate(list_sparse):
-            array = sparse.toarray()[0]
-            matrix[idx] = array
+            array = sparse.toarray()
+            matrix[idx] = array.ravel()
 
         return matrix
 
@@ -253,8 +253,8 @@ class abPredictor:
 
         print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain - l2\tVal - l2")
         for i in range(-8,0):
-            #self._lr.set_value(np.float32(10**i))#np.float32(random.uniform(0.001, 0.0001)))
-            self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
+            self._lr.set_value(np.float32(10**i))#np.float32(random.uniform(0.001, 0.0001)))
+            #self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
             #self._sigma.set_value(i/10)#np.float32(random.uniform(0.,0.05)))
 
             network, train_loss, val_loss, t_l2, v_l2 = self._train_network(network, self._train_fn, self._val_fn,
@@ -380,8 +380,8 @@ class abPredictor:
 
 if __name__ == '__main__':
     a = abPredictor()
-    #a.explore_hyperparameters()
-    a.fit_network()
+    a.explore_hyperparameters()
+    #a.fit_network()
 
     #b = a._compute_sim_matrix()
     #joblib.dump(b, COMPUTED_SIM_MATRIX)
