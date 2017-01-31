@@ -13,6 +13,7 @@ BASEFILE = "../../datasets/Enriched_Netflix_Dataset/"
 ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
 ICM_RED_MATRIX_FILE = "../../datasources/netflix/icm_red_mat_sample.pkl"
 ICM_RED_DICTIONARY_FILE = "../../datasources/netflix/icm_red_dict.pkl"
+IDF_MATRIX_FILE = "../../datasources/netflix/idf_array.pkl"
 PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
 NUM_PROD_MAT = 21
 
@@ -106,6 +107,13 @@ class NetflixReader:
             with open(ICM_RED_MATRIX_FILE, 'wb') as f:
                 pickle.dump(self._icm_reduced_matrix, f, pickle.HIGHEST_PROTOCOL)
 
+        try: 
+            with open(IDF_MATRIX_FILE, 'rb') as f:
+                self._idf_array = pickle.load(f)
+        except:
+            self._idf_array = self._compute_idf(self._icm_reduced_matrix.shape)
+            with open(IDF_MATRIX_FILE, 'wb') as f:
+                pickle.dump(self._idf_array, f, pickle.HIGHEST_PROTOCOL)
 
         #try to load the matrix of products
         try:
@@ -116,7 +124,19 @@ class NetflixReader:
             self._build_products_matrix()
             self._store_prod_mat()
             self._load_prod_mat()
-    
+
+    def _compute_idf(self, icm_shape):
+        self._n_items, self._n_features = icm_shape
+        print("IDF COMPUTATION")
+        print("N_items {}, N_Features: {}".format( self._n_items, self._n_features))
+        list_idf = []
+        for f in range(self._n_features):
+            tmp = np.sum(self._icm_reduced_matrix[:,f])
+            list_idf.append(math.log10(self._n_items/ tmp))
+        print("IDF ARRAY",self._idf_array)
+
+        return  np.array(list_idf)
+        
     def test_reduced_matrix(self):
         print("Test reduced space as matrix")
         print("Type:{}, shape:{}".format(type(self._icm_reduced_matrix),self._icm_reduced_matrix.shape))
@@ -519,7 +539,11 @@ class NetflixReader:
             [self._similarity_titles(movieId1, movieId2)]
             ))
     
-    
+
+    def _similarity_features_idf(self, moviedId1, movieId2):
+        return self._icm_reduced_matrix[moviedId1].multiply(self._icm_reduced_matrix[movieId2]).multiply(self._idf_array)
+
+
     ###PUBLIC METHOD TO BE CALLED TO OBTAIN THE FEATURES PRODUCTS BETWEEN TWO ITEMS###
     def get_similarity(self, i, j):
         if i == j:
