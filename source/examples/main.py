@@ -27,7 +27,7 @@ l2 = 100000
 
 USAGE = "CBF"
 
-CBF_METRIC = "Cosine" 
+CBF_METRIC = "Pearson" 
 IDF = True 
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
