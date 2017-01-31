@@ -21,11 +21,11 @@ if USE_ENTIRE_FEATURES:
     NUM_FEATURES = 4701
 
 GAUSSIAN_NOISE_SIGMA = 0.
-LEARNING_RATE = 0.00000500
+LEARNING_RATE = 0.0005
 L2_LAMBDA = 0.
 
-NUM_EPOCHS = 10
-BATCH_SIZE = 300000
+NUM_EPOCHS = 50
+BATCH_SIZE = 4096
 VAL_PERCENTAGE = 0.1
 RND_NULL_SIM = 0.10  # percentage of null similarities to add
 
@@ -129,8 +129,8 @@ class abPredictor:
     def _create_learning_functions(self, network, input_var, t_var, lr, l2_lambda):
         params = lasagne.layers.get_all_params(network, trainable=True)
 
-        out = lasagne.layers.get_output(network)*10000
-        target_var = t_var*10000
+        out = lasagne.layers.get_output(network)
+        target_var = t_var
         test_out = lasagne.layers.get_output(network, deterministic=True)
 
         loss = lasagne.objectives.squared_error(out, target_var)
@@ -253,8 +253,8 @@ class abPredictor:
 
         print("LR\t\tL2\t\tGS\t\tTrain Loss\tVal Loss\tTrain - l2\tVal - l2")
         for i in range(-8,0):
-            self._lr.set_value(np.float32(10**i))#np.float32(random.uniform(0.001, 0.0001)))
-            #self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
+            #self._lr.set_value(np.float32(10**i))#np.float32(random.uniform(0.001, 0.0001)))
+            self._l2.set_value(10**i)#np.float32(random.uniform(0.00000001, 0.00000100)))
             #self._sigma.set_value(i/10)#np.float32(random.uniform(0.,0.05)))
 
             network, train_loss, val_loss, t_l2, v_l2 = self._train_network(network, self._train_fn, self._val_fn,
@@ -381,7 +381,7 @@ class abPredictor:
 if __name__ == '__main__':
     a = abPredictor()
     #a.explore_hyperparameters()
-    #a.fit_network()
+    a.fit_network()
 
     #b = a._compute_sim_matrix()
     #joblib.dump(b, COMPUTED_SIM_MATRIX)
