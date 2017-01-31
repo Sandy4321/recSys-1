@@ -133,7 +133,7 @@ class NetflixReader:
         for f in range(self._n_features):
             tmp = np.sum(self._icm_reduced_matrix[:,f])
             list_idf.append(math.log10(self._n_items/ tmp))
-        print("IDF ARRAY",self._idf_array)
+        print("IDF ARRAY",list_idf)
 
         return  np.array(list_idf)
         
@@ -563,6 +563,8 @@ class NetflixReader:
     def get_similarity_tuple(self, ij):
         return self.get_similarity(ij[0], ij[1])
             
+    def get_idf_array(self):
+        return self._idf_array
 
 ###USED TO PARALLELY COMPUTE THE SIMILARITY MATRIX###
 #i1 end IS NOT COMPUTED

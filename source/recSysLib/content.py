@@ -5,7 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 import pickle
 from .base import Recommender,check_matrix
 
-WEIGHT_CBF = "../../datasources/matrices/cbf_cosine.pkl"
+WEIGHT_CBF = "../../datasources/matrices/cbf_"
 MIN_SIM = 1e-5
 
 class Simple_CBF(Recommender):
@@ -17,13 +17,23 @@ class Simple_CBF(Recommender):
     """
     
     # Initialization
-    def __init__(self, X, metric ='Pearson'):
+    def __init__(self, X, metric ='Pearson', idf_array = None, IDF = True):
         super(Simple_CBF, self).__init__()
         self.metric = metric
         self.icm = X
-
         # Weight matrix computation
         self._compute_weight_matrix(verbose = 0)
+        if IDF:
+            self._idf_array = idf_array
+        self.idf_mode = IDF
+
+        WEIGHT_CBF += metric
+        if IDF:
+            WEIGHT_CBF += "_IDF_"
+        else:
+            WEIGHT_CBF += "_bin_"
+
+        WEIGHT_CBF += ".pkl"
 
     # toString()
     def __str__(self):
@@ -59,14 +69,21 @@ class Simple_CBF(Recommender):
                         if verbose > 0:
                             print("item i: {}\nitem j:{}".format(X[i],X[j]))
                             print("content i:{}\ncontent j:{}".format(X[i].toarray()[0],X[j].toarray()[0]))
-                        c,_ = stats.pearsonr(X[i].toarray()[0], X[j].toarray()[0])
+                        if self.idf_mode: 
+                            c,_ = stats.pearsonr(X[i].toarray()[0].multiply(self._idf_array), X[j].toarray()[0].multiply(self._idf_array))
+                        else:
+                            c,_ = stats.pearsonr(X[i].toarray()[0], X[j].toarray()[0])
+
                         if verbose > 0:
                             print("item-1: {}\nitem-2:{}:sim{}".format(X[i].nonzero()[1],X[j].nonzero()[1], c))
                     if self.metric == 'Cosine':
                         if verbose > 0:
                             print("item i: {}\nitem j:{}".format(X[i],X[j]))
                             print("shapes: {}, {}".format(X[i].shape, X[j].shape))
-                        c = cosine_similarity(X[i], X[j])[0][0] 
+                        if self.idf_mode:
+                            c = cosine_similarity(X[i].multiply(self._idf_array), X[j].multuply(self._idf_array))[0][0] 
+                        else:
+                            c = cosine_similarity(X[i], X[j])[0][0]
                     if c > MIN_SIM:
                         self._weight_matrix[i,j] = c
                         self._weight_matrix[j,i] = c

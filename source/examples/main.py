@@ -28,6 +28,7 @@ l2 = 100000
 USAGE = "CBF"
 
 CBF_METRIC = "Cosine" 
+IDF = True 
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
@@ -51,7 +52,11 @@ print("Original: {} , train : {} , test: {} ".format(netflix_urm.shape, train_UR
 if USAGE == "SLIM":
     model = slim.MultiThreadSLIM(train_URMmatrix, l1_penalty=l1,l2_penalty=l2)
 elif USAGE == "CBF":
-    model = content.Simple_CBF(icm_reduced_matrix, CBF_METRIC)
+    idf_array = netflix_reader.get_idf_array()
+    if IDF:
+        model = content.Simple_CBF(X = icm_reduced_matrix, idf_array= idf_array, metric = CBF_METRIC, IDF = IDF)
+    else:
+        model = content.Simple_CBF(X = icm_redued_matrix, meric = CBF_METRIC, IDF = IDF) 
 elif USAGE == "ABP":
     model = abp.abPredictor()
 
