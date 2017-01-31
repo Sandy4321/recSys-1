@@ -21,11 +21,11 @@ if USE_ENTIRE_FEATURES:
     NUM_FEATURES = 4701
 
 GAUSSIAN_NOISE_SIGMA = 0.
-LEARNING_RATE = 0.00000500
+LEARNING_RATE = 0.00001
 L2_LAMBDA = 0.
 
-NUM_EPOCHS = 10
-BATCH_SIZE = 300000
+NUM_EPOCHS = 5
+BATCH_SIZE = 100
 VAL_PERCENTAGE = 0.1
 RND_NULL_SIM = 0.10  # percentage of null similarities to add
 
@@ -129,8 +129,8 @@ class abPredictor:
     def _create_learning_functions(self, network, input_var, t_var, lr, l2_lambda):
         params = lasagne.layers.get_all_params(network, trainable=True)
 
-        out = lasagne.layers.get_output(network)*10000
-        target_var = t_var*10000
+        out = lasagne.layers.get_output(network)
+        target_var = t_var
         test_out = lasagne.layers.get_output(network, deterministic=True)
 
         loss = lasagne.objectives.squared_error(out, target_var)
@@ -222,8 +222,8 @@ class abPredictor:
     def _from_list_of_sparse_to_matrix(self, list_sparse):
         matrix = np.zeros((BATCH_SIZE, NUM_FEATURES), dtype=np.float32)
         for (idx,sparse) in enumerate(list_sparse):
-            array = sparse.toarray()[0]
-            matrix[idx] = array
+            array = sparse.toarray()
+            matrix[idx] = array.ravel()
 
         return matrix
 
@@ -380,7 +380,7 @@ class abPredictor:
 
 if __name__ == '__main__':
     a = abPredictor()
-    #a.explore_hyperparameters()
+    a.explore_hyperparameters()
     #a.fit_network()
 
     #b = a._compute_sim_matrix()
