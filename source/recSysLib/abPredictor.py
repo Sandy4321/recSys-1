@@ -34,13 +34,14 @@ MIN_SIMILARITY = 1e-5
 BASE_FILE = "../../datasources/ab/"
 if USE_ENTIRE_FEATURES:
     BASE_FILE = "../../datasources/ab_2/"
-AB_FILE_X_TRAIN = BASE_FILE + "X_train_10.pkl"
-AB_FILE_X_VAL = BASE_FILE + "X_val_10.pkl"
-AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_10.npy"
-AB_FILE_Y_VAL = BASE_FILE + "Y_val_10.npy"
-FILE = BASE_FILE + "ab_model_10.npz"
+AB_FILE_X_TRAIN = BASE_FILE + "X_train_%d.pkl" % (VAL_PERCENTAGE *100)
+AB_FILE_X_VAL = BASE_FILE + "X_val_%d.pkl" % (VAL_PERCENTAGE *100)
+AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_%d.npy" % (VAL_PERCENTAGE *100)
+AB_FILE_Y_VAL = BASE_FILE + "Y_val_%d.npy" % (VAL_PERCENTAGE *100)
+FILE = BASE_FILE + "ab_model_%d.npz" % (VAL_PERCENTAGE *100)
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_10.npz"
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_%d.npz" % (VAL_PERCENTAGE *100)
+
 
 
 class abPredictor:
@@ -375,12 +376,12 @@ class abPredictor:
     ###GET THE SIMILARITY MATRIX COMPUTED BY THE NETWORK###
     def get_weight_matrix(self):
         matrix = joblib.load(COMPUTED_SIM_MATRIX)
-        matrix[matrix < MIN_SIMILARITY] = 0.0
+        matrix[matrix < 0] = 0
         return matrix
 
 if __name__ == '__main__':
     a = abPredictor()
-    a.explore_hyperparameters()
+    #a.explore_hyperparameters()
     #a.fit_network()
 
     #b = a._compute_sim_matrix()
