@@ -27,8 +27,10 @@ l2 = 100000
 
 USAGE = "CBF"
 
-CBF_METRIC = "Pearson" 
+CBF_METRIC = "Cosine" 
 IDF = True 
+
+SIM_CUT = 1e-4
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
@@ -56,7 +58,7 @@ elif USAGE == "CBF":
     if IDF:
         model = content.Simple_CBF(X = icm_reduced_matrix, idf_array= idf_array, metric = CBF_METRIC, IDF = IDF)
     else:
-        model = content.Simple_CBF(X = icm_redued_matrix, meric = CBF_METRIC, IDF = IDF) 
+        model = content.Simple_CBF(X = icm_reduced_matrix, metric = CBF_METRIC, IDF = IDF) 
 elif USAGE == "ABP":
     model = abp.abPredictor()
 
@@ -67,7 +69,7 @@ weight_matrix = model.get_weight_matrix()
 #try to filter it
 if USAGE == "CBF":
     weight_matrix = scipy.sparse.lil_matrix(weight_matrix)
-    weight_matrix[weight_matrix < 1e-4] = 0
+    weight_matrix[weight_matrix < SIM_CUT ] = 0
     weight_matrix = scipy.sparse.csc_matrix(weight_matrix)
 
 evaluator = Evaluator(test_URMmatrix, weight_matrix)

@@ -25,14 +25,14 @@ class Simple_CBF(Recommender):
             self._idf_array = idf_array
         self.idf_mode = IDF
 
-        WEIGHT_CBF = "../../datasources/matrices/cbf_"
-        WEIGHT_CBF += metric
+        self.WEIGHT_CBF = "../../datasources/matrices/cbf_"
+        self.WEIGHT_CBF += metric
         if IDF:
-            WEIGHT_CBF += "_IDF_"
+            self.WEIGHT_CBF += "_IDF_"
         else:
-            WEIGHT_CBF += "_bin_"
+            self.WEIGHT_CBF += "_bin_"
 
-        WEIGHT_CBF += ".pkl"
+        self.WEIGHT_CBF += ".pkl"
 
         self._compute_weight_matrix(verbose = 0)
     # toString()
@@ -42,6 +42,7 @@ class Simple_CBF(Recommender):
     def _compute_weight_matrix(self, verbose = 0):
         X = check_matrix(self.icm, format='csc', dtype=np.int32)
         print("Init CBF weight matrix computation")
+        print(self.metric + " IDF: " + str(self.idf_mode))
         if verbose > 0:
             print("ICM conversion to csc sparse matrix")
             print("ICM type: {}, shape: {}".format(type(X), X.shape))
@@ -52,7 +53,7 @@ class Simple_CBF(Recommender):
             print("Item Indexes {},\nlen: {}".format(item_indexes,
                                                      len(item_indexes)))
         try:
-            with open(WEIGHT_CBF, 'rb') as in_file:
+            with open(self.WEIGHT_CBF, 'rb') as in_file:
                 self._weight_matrix = pickle.load(in_file)
             print("Load CBF weight matrix")
         except:
@@ -71,8 +72,12 @@ class Simple_CBF(Recommender):
                             print("item i: {}\nitem j:{}".format(X[i],X[j]))
                             print("content i:{}\ncontent j:{}".format(X[i].toarray()[0],X[j].toarray()[0]))
                         
-                        if self.idf_mode: 
-                            c,_ = stats.pearsonr(X[i].toarray()[0].multiply(self._idf_array), X[j].toarray()[0].multiply(self._idf_array))
+                        if self.idf_mode == True: 
+#                            c,_ = stats.pearsonr(X[i].multiply(self._idf_array),
+#                                           X[j].multiply(self._idf_array))
+                            print(type(X[i].toarray()[0]))
+                            print("Shapes ELSE:",X[i].toarray()[0].shape)
+                            print("Shapes IF:",np.dot(X[i].toarray()[0], self._idf_array).shape)
                         else:
                             c,_ = stats.pearsonr(X[i].toarray()[0], X[j].toarray()[0])
 
@@ -93,7 +98,7 @@ class Simple_CBF(Recommender):
             if verbose > 0:
                 print("Final weight matrix: {}".format(self._weight_matrix))
             
-            with open(WEIGHT_CBF, 'wb') as out_file:
+            with open(self.WEIGHT_CBF, 'wb') as out_file:
                 pickle.dump(self._weight_matrix, out_file, pickle.HIGHEST_PROTOCOL) 
             
             print("Weight computation - CBF, END") 
