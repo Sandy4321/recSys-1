@@ -21,6 +21,7 @@ class Evaluator:
             scores = scores.toarray()
         except:
             #Who cares, W was not sparse
+            pass
         scores = scores.ravel()
         ranking = scores.argsort()[::-1]
         # rank items
