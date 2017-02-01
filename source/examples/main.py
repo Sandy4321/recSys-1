@@ -26,11 +26,11 @@ l1 = 0.1
 l2 = 100000
 
 USAGE = "CBF"
-
-CBF_METRIC = "Cosine" 
+TESTING = "NEW_USER"
+CBF_METRIC = "Pearson" 
 IDF = True 
 
-SIM_CUT = 1e-4
+SIM_CUT = 1e-3
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
@@ -43,8 +43,12 @@ netflix_urm = get_urm()
 urm_partition = DataPartition(netflix_urm)
 urm_partition.split_cross(train_perc_col=percentage_train_col, train_perc_row=percentage_train_row,verbose=0)
 
-train_URMmatrix = urm_partition.get_upLeft_matrix()
-test_URMmatrix = urm_partition.get_lowLeft_matrix()
+if TESTING == 'NEW_USER':
+    train_URMmatrix = urm_partition.get_upLeft_matrix()
+    test_URMmatrix = urm_partition.get_lowLeft_matrix()
+elif TESTING == 'NEW_ITEM':
+    train_URMmatrix = urm_partition.get_upLeft_matrix()
+    test_URMmatrix = urm_partition.get_upRight_matrix()
 
 icm_reduced_matrix = netflix_reader._icm_reduced_matrix
 
@@ -75,12 +79,18 @@ if USAGE == "CBF":
 evaluator = Evaluator(test_URMmatrix, weight_matrix)
 
 # Compute residual and sampled matrices. (holdout for evaluation)
-evaluator.holdout(verbose = 1)
-# Set of learning matrix as the sampled_csc
-evaluator.set_urm_matrix(evaluator.get_residual_csc())
+if TESTING == 'NEW_USER'
+    evaluator.holdout(verbose = 1, TESTING)
+    # Set of learning matrix as the sampled_csc
+    evaluator.set_urm_matrix(evaluator.get_residual_csc())
+    users_test = np.unique(test_URMmatrix.nonzero()[0])
+    evaluation_URMmatrix = evaluator.get_sampled_csc()
 
-users_test = np.unique(test_URMmatrix.nonzero()[0])
-evaluation_URMmatrix = evaluator.get_sampled_csc()
+#use up left to predict up right
+elif TESTING == 'NEW_ITEM'
+    evaluator.set_urm_matrix(train_URMmatrix)
+    users_test = np.unique(train_URMmatrix.xonnzero()[0])
+    evaluation_URMmatrix = test_URMmatrix
 
 #cut weight matrix
 if weight_matrix.shape[0] > test_URMmatrix.shape[1]:
