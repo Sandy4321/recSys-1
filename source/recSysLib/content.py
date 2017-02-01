@@ -71,13 +71,24 @@ class Simple_CBF(Recommender):
                         if verbose > 0:
                             print("item i: {}\nitem j:{}".format(X[i],X[j]))
                             print("content i:{}\ncontent j:{}".format(X[i].toarray()[0],X[j].toarray()[0]))
-                        
+                        print("TYPES: X[i] {}, X[i].toarray() {}, X[i].toarray()[0] {}".format( type(X[i]), type(X[i].toarray()),type(X[i].toarray()[0])))
+                        print("TYPE IDF",type(self._idf_array) ,
+                              self._idf_array.shape)
+                        print("SHAPES", (X[i].toarray()[0]).shape)
+                        print("RESHAPES", type(X[i].toarray()[0].reshape(4699,1)), X[i].toarray()[0].reshape(-1).shape)
+                        print("TO LIST",
+                              type(np.asarray(X[i].toarray()[0].tolist())),
+                              np.asarray(X[i].toarray()[0].tolist()).shape)
+#                        print("To ARRAY TEST",X[i].toarray()[0])
+#                        print("MUL TEST",(X[i].toarray()[0]).multiply(self._idf_array))
+                        print("MULTIPLY",X[i].multiply(self._idf_array).shape,
+                              type(np.array(X[i].multiply(self._idf_array))))
+
                         if self.idf_mode == True: 
-#                            c,_ = stats.pearsonr(X[i].multiply(self._idf_array),
-#                                           X[j].multiply(self._idf_array))
-                            print(type(X[i].toarray()[0]))
-                            print("Shapes ELSE:",X[i].toarray()[0].shape)
-                            print("Shapes IF:",np.dot(X[i].toarray()[0], self._idf_array).shape)
+                            c,_ = stats.pearsonr(np.multiply(X[i], self._idf_array), np.multiply(X[j], self._idf_array))
+                            #print(type(X[i].toarray()[0]))
+                            #print("Shapes ELSE:",X[i].toarray()[0].shape)
+                            #print("Shapes IF:",np.dot(X[i].toarray()[0], self._idf_array).shape)
                         else:
                             c,_ = stats.pearsonr(X[i].toarray()[0], X[j].toarray()[0])
 
