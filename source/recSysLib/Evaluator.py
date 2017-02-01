@@ -16,7 +16,12 @@ class Evaluator:
     def recommend(self, user_id, n=None, exclude_seen=True):
         # compute the scores using the dot product
         user_profile = self._get_user_ratings(user_id, mode = "RESIDUAL")
-        scores = user_profile.dot(self.W_sparse).toarray().ravel()
+        scores = user_profile.dot(self.W_sparse)
+        try:
+            scores = scores.toarray()
+        except:
+            #Who cares, W was not sparse
+        scores = scores.ravel()
         ranking = scores.argsort()[::-1]
         # rank items
         if exclude_seen:
