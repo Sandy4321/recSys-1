@@ -6,7 +6,7 @@ import pickle
 from .base import Recommender,check_matrix
 import recpy.recommenders.similarity as sim 
 
-MIN_SIM = 1e-5
+MIN_SIM = 1e-9
 
 class Simple_CBF(Recommender):
     """
