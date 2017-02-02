@@ -13,7 +13,7 @@ class Evaluator:
         self.dataset = urm
         self.W_sparse = w
 
-    def recommend(self, user_id, n=None, exclude_seen=True):
+    def recommend(self, user_id, n=None, exclude_seen=True, exclude_old=False):
         # compute the scores using the dot product
         user_profile = self._get_user_ratings(user_id, mode = "RESIDUAL")
         scores = user_profile.dot(self.W_sparse)
@@ -23,6 +23,9 @@ class Evaluator:
             #Who cares, W was not sparse
             pass
         scores = scores.ravel()
+        if exclude_old:
+            scores = self._filter_old(scores)
+
         ranking = scores.argsort()[::-1]
         # rank items
         if exclude_seen:
@@ -61,6 +64,14 @@ class Evaluator:
         seen = list(user_profile.nonzero()[1])
         unseen_mask = np.in1d(ranking, seen, assume_unique=True, invert=True)
         return ranking[unseen_mask]
+
+    def _filter_old(self, scores):
+        scores[:self._num_old_items] = 0 
+        return scores
+
+    def set_num_old_items(self, num):
+        self._num_old_items = num
+        print(num)
 
     def holdout_user(self, k, verbose = 0):
         #try to load the matrices, otherwise compute and store them

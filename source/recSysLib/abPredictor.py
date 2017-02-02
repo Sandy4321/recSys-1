@@ -27,7 +27,7 @@ L2_LAMBDA = 0.
 NUM_EPOCHS = 5
 BATCH_SIZE = 100
 VAL_PERCENTAGE = 0.1
-RND_NULL_SIM = 0.10  # percentage of null similarities to add
+RND_NULL_SIM = 0.01  # percentage of null similarities to add
 
 MIN_SIMILARITY = 1e-5
 
@@ -40,8 +40,8 @@ AB_FILE_Y_TRAIN = BASE_FILE + "Y_train_%d.npy" % (RND_NULL_SIM *100)
 AB_FILE_Y_VAL = BASE_FILE + "Y_val_%d.npy" % (RND_NULL_SIM *100)
 FILE = BASE_FILE + "ab_model_%d.npz" % (RND_NULL_SIM *100)
 SLIM_FILE = "../../datasources/slim/slimW_0.1_10.npz"
-COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_%d.npz" % (RND_NULL_SIM *100)
-
+COMPUTED_SIM_MATRIX = "../../datasources/ab_2/sim_mat_allItems_%d.npz" % (RND_NULL_SIM *100)
+#mind the allItems
 
 
 class abPredictor:
@@ -354,7 +354,7 @@ class abPredictor:
     def _compute_sim_matrix(self):
         rdr = NetflixReader()
         weight_matrix = joblib.load(SLIM_FILE)
-        n_items = weight_matrix.shape[0]
+        n_items = rdr.numItems
         matrix = np.zeros((n_items,n_items), dtype=np.float32)
 
         print("Computing products")
