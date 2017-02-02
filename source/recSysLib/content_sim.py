@@ -17,15 +17,13 @@ class Simple_CBF(Recommender):
     """
 
     # Initialization
-    def __init__(self, X, metric ='Pearson', idf_array = None, IDF = True,
+    def __init__(self, X, metric ='Pearson', IDF = True,
                  shrink = 10):
         super(Simple_CBF, self).__init__()
         self.metric = metric
         self.icm = X
         self.shrink = shrink
         # Weight matrix computation
-        if IDF:
-            self._idf_array = idf_array
         self.idf_mode = IDF
 
         self._compute_weight_matrix(verbose = 0)
@@ -58,6 +56,7 @@ class Simple_CBF(Recommender):
         self.WEIGHT_CBF += str(self.shrink) + '.pkl'
 
         try:
+            self.WEIGHT_CBF['casa']
             with open(self.WEIGHT_CBF, 'rb') as in_file:
                 print("Init loading CBF weight matrix")
                 self._weight_matrix = pickle.load(in_file)
@@ -80,7 +79,7 @@ class Simple_CBF(Recommender):
                     print("item i: {}\nitem j:{}".format(X[i],X[j]))
                     print("shapes: {}, {}".format(X[i].shape, X[j].shape))
 
-                self._weight_matrix = sim.Cosine(shrinkage = self.shrink).compute(x)
+                self._weight_matrix = sim.Cosine(shrinkage = self.shrink).compute(X)
 
             if verbose > 0:
                 print("Final weight matrix: {}".format(self._weight_matrix))

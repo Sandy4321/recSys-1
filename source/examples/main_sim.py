@@ -28,9 +28,9 @@ l2 = 100000
 
 USAGE = "CBF"
 TESTING = "NEW_USER"
-CBF_METRIC = "Pearson"
+CBF_METRIC = "Cosine"
 IDF = True
-SHRINK = 10
+SHRINK = 100
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
@@ -51,6 +51,7 @@ elif TESTING == 'NEW_ITEM':
     test_URMmatrix = urm_partition.get_upRight_matrix()
 
 icm_reduced_matrix = netflix_reader._icm_reduced_matrix
+icm_idf_matrix = scipy.sparse.lil_matrix(icm_reduced_matrix.shape)
 
 print("Original: {} , train : {} , test: {} ".format(netflix_urm.shape, train_URMmatrix.shape, test_URMmatrix.shape))
 
@@ -60,9 +61,14 @@ if USAGE == "SLIM":
 elif USAGE == "CBF":
     idf_array = netflix_reader.get_idf_array()
     if IDF:
-        model = content_sim.Simple_CBF(X = icm_reduced_matrix.T, idf_array = idf_array, metric = CBF_METRIC, IDF = IDF, shrink = SHRINK)
+        for row in range(icm_reduced_matrix.shape[0]):
+            icm_idf_matrix[row] = icm_reduced_matrix[row].multiply(idf_array)[0]
+        model = content_sim.Simple_CBF(X = icm_idf_matrix.T, metric = CBF_METRIC, IDF = IDF, shrink = SHRINK)
     else:
-        model = content_si_sim.Simple_CBF(X = icm_reduced_matrix.T, metric = CBF_METRIC, IDF = IDF, SHRINK = SHRINK) 
+        print("CBF in main")
+        model = content_sim.Simple_CBF(X = icm_reduced_matrix.T, metric = CBF_METRIC, IDF = IDF, shrink = SHRINK) 
+    
+    print(icm_reduced_matrix[icm_reduced_matrix != 1])
 elif USAGE == "ABP":
     model = abp.abPredictor()
 
