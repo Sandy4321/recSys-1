@@ -1,7 +1,7 @@
 import numpy as np
 import scipy.sparse as sps
-from .base import check_matrix
-from .._cython._similarity import cosine_common
+from base import check_matrix
+from ._cython._similarity import cosine_common
 
 
 class ISimilarity(object):
