@@ -1,10 +1,10 @@
 from recSysLib.dataset_partition import DataPartition
 from recSysLib.data_split import holdout
 from recSysLib.data_utils import get_urm, load_sparse_mat, store_sparse_mat
-from recSysLib.metrics import precision, recall
+from recSysLib.metrics_max import precision, recall, roc_auc, rr, ndcg, map
 
 # Models used to compute the Weight Matrix
-from recSysLib import slim, content 
+from recSysLib import slim, content_sim 
 from recSysLib import abPredictor as abp
 
 # Dataset reader and Evaluator class
@@ -12,6 +12,7 @@ from recSysLib.netflix_reader import NetflixReader
 from recSysLib.Evaluator import Evaluator
 import numpy as np
 import scipy
+import sys
 
 # Run Parameters
 percentage_train_col = 0.75
@@ -20,16 +21,22 @@ percentage_train_row = 0.75
 percentage_sub_train_col = 0.7
 percentage_sub_train_row = 0.7
 
-k = 5 # Number of k-items to make the evaluation on
-n_simil_items = 50 #number of similarities to keep for each item
+k1 = 1 # Number of k-items to make the evaluation on
+k2 = 2
+k3 = 5
+k4 = 10
+k5 = 25
+k6 = 50
 
 l1 = 0.1
 l2 = 100000
 
-USAGE = "CBF"
-TESTING = "NEW_ITEM"
-CBF_METRIC = "Pearson"
-IDF = False
+USAGE = sys.argv[1]
+TESTING = sys.argv[2]
+CBF_METRIC = sys.argv[3]
+IDF = sys.argv[4] == '1'
+n_simil_items = int(sys.argv[5]) #number of similarities to keep for each item
+SHRINK = int(sys.argv[6])
 
 verbose = 1 # Not all the print depend from verbose! Some are persistent.
 
@@ -50,6 +57,7 @@ elif TESTING == 'NEW_ITEM':
     test_URMmatrix = urm_partition.get_upRight_matrix()
 
 icm_reduced_matrix = netflix_reader._icm_reduced_matrix
+icm_idf_matrix = scipy.sparse.lil_matrix(icm_reduced_matrix.shape)
 
 print("Original: {} , train : {} , test: {} ".format(netflix_urm.shape, train_URMmatrix.shape, test_URMmatrix.shape))
 
@@ -59,9 +67,13 @@ if USAGE == "SLIM":
 elif USAGE == "CBF":
     idf_array = netflix_reader.get_idf_array()
     if IDF:
-        model = content.Simple_CBF(X = icm_reduced_matrix, idf_array= idf_array, metric = CBF_METRIC, IDF = IDF)
+        for row in range(icm_reduced_matrix.shape[0]):
+            icm_idf_matrix[row] =icm_reduced_matrix[row].multiply(idf_array)[0]
+        model = content_sim.Simple_CBF(X = icm_idf_matrix.T, metric =
+                                       CBF_METRIC, IDF = IDF, shrink=SHRINK)
     else:
-        model = content.Simple_CBF(X = icm_reduced_matrix, metric = CBF_METRIC, IDF = IDF) 
+        model = content_sim.Simple_CBF(X = icm_reduced_matrix.T, metric =
+                                       CBF_METRIC, IDF = IDF, shrink = SHRINK)
 elif USAGE == "ABP":
     model = abp.abPredictor()
 
@@ -88,7 +100,7 @@ if TESTING == 'NEW_USER':
 
 #use up left to predict up right
 elif TESTING == 'NEW_ITEM':
-    #fill the train urm with zeros on th?!?jedi=0, e right?!? (*_*arg1*_*, shape=None, dtype=None, copy=False) ?!?jedi??
+    #fill the train urm with zeros on the right
     zeros_right = scipy.sparse.csc_matrix((train_URMmatrix.shape[0],
                                           test_URMmatrix.shape[1]))
     num_old_items = train_URMmatrix.shape[1]
@@ -101,7 +113,8 @@ elif TESTING == 'NEW_ITEM':
     evaluator.residual_csc = train_URMmatrix
 
 # iterate over each column and keep only the top-k similar items
-weight_matrix=weight_matrix.toarray()
+if not isinstance(weight_matrix, np.ndarray):
+    weight_matrix=weight_matrix.toarray()
 idx_sorted = weight_matrix.argsort(axis=0) # sort by column
 values, rows, cols = [], [], []
 nitems = weight_matrix.shape[0]
@@ -120,17 +133,56 @@ if filter_old:
 ##Helper function to do a single user
 def _do_user(user_to_test):
     relevant_items = evaluation_URMmatrix[user_to_test].nonzero()[1]
-    #if we are doing nre items their ID has been moved to the left
-    relevant_items += num_old_items
+    #if we are doing new items their ID has been moved to the left
+    if filter_old:
+        relevant_items += num_old_items
 
     if len(relevant_items) > 0:
         recommended_items = evaluator.recommend(user_id = user_to_test,
                                                 exclude_seen=True,
                                                 exclude_old=filter_old)
-        prec = precision(recommended_items, relevant_items, at=k)
-        rec = recall(recommended_items, relevant_items, at=k)
-        return (prec, rec)
-    return (np.nan, np.nan)
+        auc = roc_auc(recommended_items, relevant_items)
+        
+        prec1 = precision(recommended_items, relevant_items, at=k1)
+        prec2 = precision(recommended_items, relevant_items, at=k2)
+        prec3 = precision(recommended_items, relevant_items, at=k3)
+        prec4 = precision(recommended_items, relevant_items, at=k4)
+        prec5 = precision(recommended_items, relevant_items, at=k5)
+        prec6 = precision(recommended_items, relevant_items, at=k6)
+
+        rec1 = recall(recommended_items, relevant_items, at=k1)
+        rec2 = recall(recommended_items, relevant_items, at=k2)
+        rec3 = recall(recommended_items, relevant_items, at=k3)
+        rec4 = recall(recommended_items, relevant_items, at=k4)
+        rec5 = recall(recommended_items, relevant_items, at=k5)
+        rec6 = recall(recommended_items, relevant_items, at=k6)
+       
+        rr1 = rr(recommended_items, relevant_items, at=k1)
+        rr2 = rr(recommended_items, relevant_items, at=k2)
+        rr3 = rr(recommended_items, relevant_items, at=k3)
+        rr4 = rr(recommended_items, relevant_items, at=k4)
+        rr5 = rr(recommended_items, relevant_items, at=k5)
+        rr6 = rr(recommended_items, relevant_items, at=k6)
+
+        map1 = map(recommended_items, relevant_items, at=k1)
+        map2 = map(recommended_items, relevant_items, at=k2)
+        map3 = map(recommended_items, relevant_items, at=k3)
+        map4 = map(recommended_items, relevant_items, at=k4)
+        map5 = map(recommended_items, relevant_items, at=k5)
+        map6 = map(recommended_items, relevant_items, at=k6)
+
+        ndcg1 = ndcg(recommended_items, relevant_items, at=k1)
+        ndcg2 = ndcg(recommended_items, relevant_items, at=k2)
+        ndcg3 = ndcg(recommended_items, relevant_items, at=k3)
+        ndcg4 = ndcg(recommended_items, relevant_items, at=k4)
+        ndcg5 = ndcg(recommended_items, relevant_items, at=k5)
+        ndcg6 = ndcg(recommended_items, relevant_items, at=k6)
+
+        return (auc, prec1, prec2, prec3, prec4, prec5, prec6, rec1, rec2,
+                rec3, rec4, rec5, rec6, rr1, rr2, rr3, rr4, rr5, rr6, map1,
+                map2, map3, map4, map5, map6, ndcg1, ndcg2, ndcg3, ndcg4,
+                ndcg5, ndcg6)
+    return [np.nan]*31
 
 
 import multiprocessing
@@ -138,5 +190,46 @@ pool = multiprocessing.Pool(processes = multiprocessing.cpu_count())
 res = pool.map(_do_user, (u for u in users_test))
 res = np.array(res)
 
-print("The precision and recall are: {}".format(np.nanmean(res, axis=0)))
+(auc, prec1, prec2, prec3, prec4, prec5, prec6, rec1, rec2, rec3, rec4, rec5,
+rec6, rr1, rr2, rr3, rr4, rr5, rr6, map1, map2, map3, map4, map5, map6, ndcg1,
+ndcg2, ndcg3, ndcg4,ndcg5, ndcg6) = np.nanmean(res, axis=0)
+
+print()                                                                 
+print("Results of %s on %s with %d similarities." % (USAGE,TESTING,n_simil_items))
+if USAGE == 'CBF':
+    print("Metric = %s, IDF = %s, SHRINK = %d" % (CBF_METRIC, IDF, SHRINK))
+
+print("Precision@%d\tPrecision@%d\tPrecision@%d\tPrecision@%d\tPrecision@%d\tPrecision@%d"
+      % (k1,k2,k3,k4,k5,k6))
+print("%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f" % (prec1*100, prec2*100,
+                                                        prec3*100, prec4*100,
+                                                        prec5*100, prec6*100))
+
+print()
+print("Recall@%d\tRecall@%d\tRecall@%d\tRecall@%d\tRecall@%d\tRecall@%d"
+      % (k1,k2,k3,k4,k5,k6))
+print("%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f" % (rec1*100, rec2*100, rec3*100,
+                                                        rec4*100, rec5*100, rec6*100))
+
+print()
+print("RR@%d\t\tRR@%d\t\tRR@%d\t\tRR@%d\t\tRR@%d\t\tRR@%d"
+      % (k1,k2,k3,k4,k5,k6))
+print("%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f" % (rr1*100, rr2*100, rr3*100,
+                                                        rr4*100, rr5*100, rr6*100))
+
+print()
+print("Map@%d\t\tMap@%d\t\tMap@%d\t\tMap@%d\t\tMap@%d\t\tMap@%d"
+      % (k1,k2,k3,k4,k5,k6))
+print("%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f\t\t%.2f" % (map1*100, map2*100, map3*100,
+                                                        map4*100, map5*100, map6*100))
+
+print()
+print("NDCG@%d\t\tNDCG@%d\t\tNDCG@%d\t\tNDCG@%d\t\tNDCG@%d\t\tNDCG@%d"
+      % (k1,k2,k3,k4,k5,k6))
+print("%.4f\t\t%.4f\t\t%.4f\t\t%.4f\t\t%.4f\t\t%.4f" % (ndcg1, ndcg2, ndcg3,
+                                                        ndcg4, ndcg5, ndcg6))
+
+
+print()
+print("AUC:%.4f" % (auc))
 
