@@ -21,6 +21,9 @@ percentage_train_row = 0.75
 percentage_sub_train_col = 0.7
 percentage_sub_train_row = 0.7
 
+TAKE_OUT_POP = 0.2
+FILTER_TOP_POP = True
+
 k1 = 1 # Number of k-items to make the evaluation on
 k2 = 2
 k3 = 5
@@ -129,6 +132,24 @@ evaluator.set_weight_matrix(weight_matrix)
 filter_old = TESTING == 'NEW_ITEM'
 if filter_old:
     evaluator.set_num_old_items(num_old_items)
+    
+if FILTER_TOP_POP:
+    #sort whole urm
+    tot = np.sum(netflix_urm)
+    stop = TAKE_OUT_POP * tot
+    
+    counts = np.sum(netflix_urm, axis=0)
+    sorted_idx = np.argsort(-counts)
+    
+    top_pop = list()
+    done = 0
+    for idx in np.array(sorted_idx)[0]:
+        top_pop.append(idx)
+        done += counts[0,idx]
+        if done > stop:
+            break
+    
+    evaluator.set_idx_top_pop(top_pop)
 
 ##Helper function to do a single user
 def _do_user(user_to_test):
@@ -140,7 +161,8 @@ def _do_user(user_to_test):
     if len(relevant_items) > 0:
         recommended_items = evaluator.recommend(user_id = user_to_test,
                                                 exclude_seen=True,
-                                                exclude_old=filter_old)
+                                                exclude_old=filter_old,
+                                                exclude_popular=FILTER_TOP_POP)
         auc = roc_auc(recommended_items, relevant_items)
         
         prec1 = precision(recommended_items, relevant_items, at=k1)

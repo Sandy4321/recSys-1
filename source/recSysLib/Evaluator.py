@@ -13,7 +13,7 @@ class Evaluator:
         self.dataset = urm
         self.W_sparse = w
 
-    def recommend(self, user_id, n=None, exclude_seen=True, exclude_old=False):
+    def recommend(self, user_id, n=None, exclude_seen=True, exclude_old=False, exclude_popular=False):
         # compute the scores using the dot product
         user_profile = self._get_user_ratings(user_id, mode = "RESIDUAL")
         scores = user_profile.dot(self.W_sparse)
@@ -25,6 +25,8 @@ class Evaluator:
         scores = scores.ravel()
         if exclude_old:
             scores = self._filter_old(scores)
+        if exclude_popular:
+            scores = self._filter_pop(scores)
 
         ranking = scores.argsort()[::-1]
         # rank items
@@ -71,8 +73,14 @@ class Evaluator:
 
     def set_num_old_items(self, num):
         self._num_old_items = num
-        print(num)
 
+    def _filter_pop(self, scores):
+        scores[self._popular_items] = 0
+        return scores
+    
+    def set_idx_top_pop(self, idx)
+        self._popular_items = idx
+    
     def holdout_user(self, k, verbose = 0):
         #try to load the matrices, otherwise compute and store them
         try:
