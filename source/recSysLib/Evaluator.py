@@ -75,10 +75,15 @@ class Evaluator:
         self._num_old_items = num
 
     def _filter_pop(self, scores):
-        scores[self._popular_items] = 0
+        #WARNING this is bad
+        for idx in self._popular_items:
+            try:
+                scores[idx] = 0
+            except:
+                pass #I told you...
         return scores
     
-    def set_idx_top_pop(self, idx)
+    def set_idx_top_pop(self, idx):
         self._popular_items = idx
     
     def holdout_user(self, k, verbose = 0):
