@@ -14,6 +14,7 @@ ICM_DICTIONARY_FILE = "../../datasources/netflix/icm_dict.pkl"
 ICM_RED_MATRIX_FILE = "../../datasources/netflix/icm_red_mat_sample.pkl"
 ICM_RED_DICTIONARY_FILE = "../../datasources/netflix/icm_red_dict.pkl"
 IDF_MATRIX_FILE = "../../datasources/netflix/idf_array.pkl"
+FEATURES_MAP_FILE = "../../datasources/netflix/features_map.pkl"
 PRODUCTS_MATRIX_DIR = "../../datasources/netflix/f_prod_mat/"
 NUM_PROD_MAT = 21
 
@@ -76,7 +77,34 @@ class NetflixReader:
             self._build_feature_dictionary()
             with open(ICM_DICTIONARY_FILE, 'wb') as f:
                 pickle.dump(self._icm_dict, f, pickle.HIGHEST_PROTOCOL)
-                
+        
+        try:
+            with open(FEATURES_MAP_FILE, 'rb') as f:
+                self._features_map = pickle.load(f)
+        except:
+            self._sort_tag_by_pop()
+            self._sort_genres_by_pop()
+            self._sort_actor_by_pop()
+            self._sort_country_by_pop()
+            self._sort_director_by_pop()
+
+            number_reduced_features = 1
+            cutting_trsholds = {'tag':15,'genres':2,'actor':10,'country':2,'director':5}
+            number_reduced_features += self._cut_tag_by_pop(cutting_trsholds['tag'], verbose = 1)
+            number_reduced_features += self._cut_genres_by_pop(cutting_trsholds['genres'], verbose = 1)
+            number_reduced_features += self._cut_actor_by_pop(cutting_trsholds['actor'], verbose = 1)
+            number_reduced_features += self._cut_country_by_pop(cutting_trsholds['country'], verbose = 1)
+            number_reduced_features += self._cut_director_by_pop(cutting_trsholds['director'], verbose = 1)
+            self._reduced_features_space = number_reduced_features
+            
+            self._build_reduced_feature_matrix(verbose = 0)
+            with open(ICM_RED_MATRIX_FILE, 'wb') as f:
+                pickle.dump(self._icm_reduced_matrix, f, pickle.HIGHEST_PROTOCOL)
+        
+            with open(FEATURES_MAP_FILE, 'wb') as f:
+                pickle.dump(self._features_map, f, pickle.HIGHEST_PROTOCOL)
+
+        
         try:
             with open(ICM_RED_MATRIX_FILE, 'rb') as f:
                 self._icm_reduced_matrix = pickle.load(f)
@@ -311,6 +339,17 @@ class NetflixReader:
             self._prod_mat.append(np.load(PRODUCTS_MATRIX_DIR+str(i)+".npy"))
 
 
+    def _compute_features_map(self):
+        list_features_map = []
+        list_features_map.extend(self._reduced_actor_indexes)
+        list_features_map.extend(self._reduced_country_indexes)
+        list_features_map.extend(self._reduced_director_indexes)
+        list_features_map.extend(self._reduced_genres_indexes)
+        list_features_map.extend(self._miniseries_features)
+        list_features_map.extend(self._reduced_tag_indexes)
+
+        self._features_map = list_features_map
+
     ###CONVERT THE MATRIX TO A DICTIONARY###
     def _build_feature_dictionary(self):
         self._icm_dict = {}
@@ -326,6 +365,7 @@ class NetflixReader:
             self._icm_dict[itemId].append(self._titles[itemId])
             
     def _build_reduced_feature_matrix(self, verbose = 0):
+        self._compute_features_map()
         self._icm_reduced_matrix = sps.lil_matrix((self._icm_matrix.shape[1], self._reduced_features_space),dtype = bool)
         print("Reduced csc matrix shape {}".format(self._icm_reduced_matrix.shape))
         n_items = self._icm_matrix.shape[1]
@@ -393,6 +433,7 @@ class NetflixReader:
                 print("FINAL: ", new_col_index)
 
     def _build_reduced_feature_dict(self):
+        self._compute_features_map()
         self._icm_reduced_dict = {}
         for itemId in range(0, self._icm_matrix.shape[1]):
             self._icm_reduced_dict[itemId] = list()
@@ -566,6 +607,9 @@ class NetflixReader:
     def get_idf_array(self):
         return self._idf_array
 
+    def get_feature_mapping(self):
+        return self._features_map
+
 ###USED TO PARALLELY COMPUTE THE SIMILARITY MATRIX###
 #i1 end IS NOT COMPUTED
 def _help_compute_matrix(x):
@@ -585,7 +629,10 @@ if __name__ == '__main__':
     a = NetflixReader()
     a.test_reduced_matrix()
     print("loaded")
-    
+   
+    print("Reduced features map:")
+    print("{}\n".format(a.get_feature_mapping()))
+
     import time
     import multiprocessing
 
